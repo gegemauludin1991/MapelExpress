@@ -6,7 +6,9 @@
     <title>MapelExpress - Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
     <style>
         body { font-family: 'Nunito', sans-serif; background-color: #F8FAFC; overflow: hidden; }
         .animate-zoom-out { animation: zoomOutIcon 4s cubic-bezier(0.25, 1, 0.3, 1) forwards; }
@@ -66,7 +68,10 @@
     <script>
         const SUPABASE_URL = 'https://nahgibyegdeioquryfde.supabase.co'; 
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // PERBAIKAN 2: Cara memanggil createClient yang benar menggunakan destructuring
+        const { createClient } = window.supabase;
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
         setTimeout(() => {
             document.getElementById('splash-screen').classList.add('splash-fade-out');
