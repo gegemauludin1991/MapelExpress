@@ -1,8 +1,8 @@
 /**
- * MAIN APP CONTROLLER - SISI CUSTOMER (SUPABASE MERGED WITH UR ORIGINAL UI)
+ * MAIN APP CONTROLLER - SISI CUSTOMER
+ * (Fix Bug Blank Putih & Relative Route Path)
  */
 
-// 1. KONEKSI SUPABASE
 const SUPABASE_URL = 'https://nahgibyegdeioquryfde.supabase.co'; 
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -12,8 +12,9 @@ const myMap = new DynamicMap('map', OFFICE.lat, OFFICE.lng, 14);
 
 myMap.map.removeLayer(myMap.driverMarker);
 
+// ROUTE FIX: Pakai ./ di depan path assets
 const officeIcon = L.icon({ 
-    iconUrl: '/assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45], popupAnchor: [0, -40] 
+    iconUrl: './assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45], popupAnchor: [0, -40] 
 });
 
 L.marker([OFFICE.lat, OFFICE.lng], { icon: officeIcon }).addTo(myMap.map).bindPopup(`
@@ -29,7 +30,7 @@ function getWaktuSekarang() {
     return `${now.getDate()} ${bulan[now.getMonth()]} ${now.getFullYear()}, ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 }
 
-const kurirIcon = L.icon({ iconUrl: '/assets/icons/kurir.png', iconSize: [40, 40], iconAnchor: [20, 20] });
+const kurirIcon = L.icon({ iconUrl: './assets/icons/kurir.png', iconSize: [40, 40], iconAnchor: [20, 20] });
 
 let liveDriverMarker = null; 
 let isOrderActive = false; 
@@ -48,9 +49,6 @@ if(customerNotifs.length === 0) {
     localStorage.setItem('mapel_customer_notif', JSON.stringify(customerNotifs));
 }
 
-// ==========================================
-// 2. SUPABASE INITIALIZER & REALTIME SENSOR
-// ==========================================
 async function initSupabaseData() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
@@ -60,7 +58,7 @@ async function initSupabaseData() {
             updateProfileUI();
         }
     } else {
-        window.location.href = '/index.html'; 
+        window.location.href = './index.html'; // ROUTE FIX
     }
 
     const { data: settings } = await supabase.from('app_settings').select('value').eq('id', 'mapel_ekspedisi').single();
@@ -69,7 +67,6 @@ async function initSupabaseData() {
         renderPinEkspedisi();
     }
 
-    // AKTIFKAN RADAR REALTIME
     supabase.channel('customer_room')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_locations' }, payload => {
             if (!isOrderActive || !window.currentOrderData) return;
@@ -94,7 +91,6 @@ async function initSupabaseData() {
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
             const data = payload.new.data;
             if (window.currentOrderData && data.id === window.currentOrderData.id) {
-                
                 if (data.status === 'pending' && data.driverId && !isOrderActive) {
                     isOrderActive = true; 
                     window.currentOrderData = data;
@@ -102,7 +98,7 @@ async function initSupabaseData() {
                         liveDriverMarker = L.marker([data.driverLat, data.driverLng], { icon: kurirIcon, zIndexOffset: 99999 }).addTo(myMap.map);
                     }
                     
-                    const drvInfo = { photo: '/assets/icons/kurir.png', name: data.driverName, nopol: data.driverNopol || '-', wa: data.driverWa || '' };
+                    const drvInfo = { photo: './assets/icons/kurir.png', name: data.driverName, nopol: data.driverNopol || '-', wa: data.driverWa || '' };
                     const formOrder = document.getElementById('section-form-order');
                     if(formOrder) {
                         formOrder.innerHTML = `
@@ -197,10 +193,6 @@ function updateProfileUI() {
     }
 }
 
-// ==========================================
-// 3. SEMUA UI ASLI LU (TETAP UTUH!)
-// ==========================================
-
 function renderLiveTrackingCard() {
     if (!window.currentOrderData || !window.currentOrderData.tracking) return;
     let listStr = window.currentOrderData.tracking.map((t, index) => {
@@ -213,7 +205,6 @@ function renderLiveTrackingCard() {
 
 document.addEventListener("DOMContentLoaded", () => {
     initSupabaseData(); 
-
     const btnNotif = document.getElementById('btn-notif-customer');
     const btnProfile = document.getElementById('btn-profile');
 
@@ -256,7 +247,7 @@ window.handleLogout = async () => {
         localStorage.removeItem('mapel_customer_notif');
         localStorage.removeItem('mapel_customer_profile'); 
         await supabase.auth.signOut();
-        window.location.href = '/index.html';
+        window.location.href = './index.html'; // ROUTE FIX
     }
 };
 
@@ -318,12 +309,13 @@ function renderCustomerNotifs() {
 function getEkspedisiLogo(nama) {
     if (!nama) return null;
     const n = nama.toLowerCase();
-    if (n.includes('j&t') || n.includes('jnt')) return '/assets/icons/j&t.png';
-    if (n.includes('jne')) return '/assets/icons/jne.png';
-    if (n.includes('ninja')) return '/assets/icons/ninja.png';
-    if (n.includes('spx') || n.includes('shopee')) return '/assets/icons/spx.png';
-    if (n.includes('wahana')) return '/assets/icons/wahana.png';
-    if (n.includes('sicepat') || n.includes('si cepat')) return '/assets/icons/sicepat.png';
+    // ROUTE FIX: Pakai ./ 
+    if (n.includes('j&t') || n.includes('jnt')) return './assets/icons/j&t.png';
+    if (n.includes('jne')) return './assets/icons/jne.png';
+    if (n.includes('ninja')) return './assets/icons/ninja.png';
+    if (n.includes('spx') || n.includes('shopee')) return './assets/icons/spx.png';
+    if (n.includes('wahana')) return './assets/icons/wahana.png';
+    if (n.includes('sicepat') || n.includes('si cepat')) return './assets/icons/sicepat.png';
     return null;
 }
 

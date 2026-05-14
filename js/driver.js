@@ -7,7 +7,7 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const OFFICE = { lat: -6.977414, lng: 107.555359 };
 const myMap = new DynamicMap('map', OFFICE.lat, OFFICE.lng, 15);
-L.marker([OFFICE.lat, OFFICE.lng], { icon: L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [45, 45] }) }).addTo(myMap.map);
+L.marker([OFFICE.lat, OFFICE.lng], { icon: L.icon({ iconUrl: './assets/icons/pin.png', iconSize: [45, 45] }) }).addTo(myMap.map);
 
 let driverProfile = JSON.parse(localStorage.getItem('mapel_driver_profile'));
 let notifications = [];

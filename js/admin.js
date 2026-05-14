@@ -58,7 +58,7 @@ async function initAdminServer() {
 // UI & MAP LOGIC
 // ==========================================
 const OFFICE = { lat: -6.977414, lng: 107.555359 };
-const basecampIcon = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45] });
+const basecampIcon = L.icon({ iconUrl: './assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45] });
 
 const adminMap = L.map('admin-map', { zoomControl: false }).setView([OFFICE.lat, OFFICE.lng], 14);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(adminMap);

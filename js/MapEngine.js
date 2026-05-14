@@ -16,7 +16,7 @@ class DynamicMap {
         this.markers = []; 
         
         const kurirIcon = L.icon({
-            iconUrl: '/assets/icons/kurir.png',
+            iconUrl: './assets/icons/kurir.png',
             iconSize: [46, 46], 
             iconAnchor: [23, 23], 
             popupAnchor: [0, -20]
