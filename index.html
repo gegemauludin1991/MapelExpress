@@ -6,9 +6,7 @@
     <title>MapelExpress - Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
-    
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Nunito', sans-serif; background-color: #F8FAFC; overflow: hidden; }
         .animate-zoom-out { animation: zoomOutIcon 4s cubic-bezier(0.25, 1, 0.3, 1) forwards; }
@@ -40,26 +38,17 @@
         </div>
 
         <div id="form-login" class="space-y-5">
-            <input type="email" id="login-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none" placeholder="Email">
-            <input type="password" id="login-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none" placeholder="Password">
+            <input type="email" id="login-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Email">
+            <input type="password" id="login-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Password">
             <button onclick="prosesLogin()" id="btn-login" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg">Masuk</button>
-            
-            <div class="flex items-center gap-3 py-2">
-                <div class="h-px bg-gray-200 flex-1"></div>
-                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Atau</span>
-                <div class="h-px bg-gray-200 flex-1"></div>
-            </div>
-            <button onclick="loginGoogle()" class="w-full bg-white border border-gray-200 font-bold py-3.5 rounded-xl shadow-sm flex items-center justify-center gap-3">
-                <img src="https://www.google.com/favicon.ico" class="w-4 h-4"> Google
-            </button>
             <p class="text-center text-sm font-bold text-gray-500 mt-6">Belum punya akun? <button onclick="toggleForm('register')" class="text-blue-600 font-bold">Daftar</button></p>
         </div>
 
         <div id="form-register" class="space-y-4 hidden">
-            <input type="text" id="reg-nama" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none" placeholder="Nama Lengkap">
-            <input type="number" id="reg-wa" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none" placeholder="WA: 0812...">
-            <input type="email" id="reg-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none" placeholder="Email">
-            <input type="password" id="reg-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none" placeholder="Password">
+            <input type="text" id="reg-nama" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Nama Lengkap">
+            <input type="number" id="reg-wa" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="WA: 0812...">
+            <input type="email" id="reg-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Email">
+            <input type="password" id="reg-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Password">
             <button onclick="prosesDaftar()" id="btn-register" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg">Buat Akun</button>
             <p class="text-center text-sm font-bold text-gray-500 mt-6">Sudah punya akun? <button onclick="toggleForm('login')" class="text-blue-600 font-bold">Masuk</button></p>
         </div>
@@ -68,11 +57,9 @@
     <script>
         const SUPABASE_URL = 'https://nahgibyegdeioquryfde.supabase.co'; 
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
-        
-        // PERBAIKAN 2: Cara memanggil createClient yang benar menggunakan destructuring
-        const { createClient } = window.supabase;
-        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Logic hilangkan splash screen
         setTimeout(() => {
             document.getElementById('splash-screen').classList.add('splash-fade-out');
             setTimeout(() => {
@@ -85,22 +72,34 @@
         function toggleForm(t) {
             document.getElementById('form-login').classList.toggle('hidden', t === 'register');
             document.getElementById('form-register').classList.toggle('hidden', t === 'login');
+            document.getElementById('auth-title').innerText = t === 'register' ? 'Buat Akun' : 'Selamat Datang!';
+            document.getElementById('auth-subtitle').innerText = t === 'register' ? 'Daftar untuk nikmati layanan kami.' : 'Masuk untuk mulai mengirim paket.';
         }
 
         async function prosesLogin() {
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-pass').value;
+            const btn = document.getElementById('btn-login');
             
-            // Hardcode Admin Check
-            if(email === 'MapelEx@admin' && pass === 'mapel2026') return window.location.href = '/admin.html';
+            if(!email || !pass) return alert("Isi email dan password bos!");
+            
+            btn.innerText = "Memverifikasi..."; btn.disabled = true;
+
+            // Hardcode Admin
+            if(email === 'MapelEx@admin' && pass === 'mapel2026') {
+                window.location.href = '/admin.html';
+                return;
+            }
 
             const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-            if (error) return alert("Login Gagal!");
+            if (error) {
+                alert("Login Gagal! Cek lagi email/password lu.");
+                btn.innerText = "Masuk"; btn.disabled = false;
+                return;
+            }
+            
+            // Sukses Login Customer -> Lempar ke app.html
             window.location.href = '/app.html';
-        }
-
-        async function loginGoogle() {
-            await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/app.html' } });
         }
 
         async function prosesDaftar() {
@@ -108,14 +107,27 @@
             const pass = document.getElementById('reg-pass').value;
             const nama = document.getElementById('reg-nama').value;
             const wa = document.getElementById('reg-wa').value;
+            const btn = document.getElementById('btn-register');
+
+            if(!email || !pass || !nama || !wa) return alert("Lengkapi semua data!");
+
+            btn.innerText = "Membuat Akun..."; btn.disabled = true;
 
             const { data, error } = await supabase.auth.signUp({ email, password: pass });
-            if (error) return alert(error.message);
+            
+            if (error) {
+                alert(error.message);
+                btn.innerText = "Buat Akun"; btn.disabled = false;
+                return;
+            }
+
             if (data.user) {
+                // Simpan profil nama dan WA ke database
                 await supabase.from('profiles').insert([{ id: data.user.id, full_name: nama, whatsapp: wa }]);
-                alert("Berhasil! Silakan Login.");
+                alert("Berhasil! Silakan masuk dengan akun barumu.");
                 toggleForm('login');
             }
+            btn.innerText = "Buat Akun"; btn.disabled = false;
         }
     </script>
 </body>
