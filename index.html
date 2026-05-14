@@ -9,130 +9,71 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Nunito', sans-serif; background-color: #F8FAFC; overflow: hidden; }
-        .animate-zoom-out { animation: zoomOutIcon 3.5s cubic-bezier(0.25, 1, 0.3, 1) forwards; }
+        .animate-zoom-out { animation: zoomOutIcon 4s cubic-bezier(0.25, 1, 0.3, 1) forwards; }
         @keyframes zoomOutIcon { 0% { transform: scale(1.5); opacity: 0; } 20% { transform: scale(1); opacity: 1; } 85% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.85); opacity: 0; } }
-        .animate-slide-text { animation: slideText 3.5s cubic-bezier(0.25, 1, 0.3, 1) forwards; display: inline-block; }
-        @keyframes slideText { 0% { transform: translateY(20px); opacity: 0; } 20% { transform: translateY(0); opacity: 1; } 85% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }
+        .animate-slide-text { animation: slideText 4s cubic-bezier(0.25, 1, 0.3, 1) forwards; display: inline-block; }
+        @keyframes slideText { 0% { transform: translateX(-100vw); opacity: 0; } 20% { transform: translateX(0); opacity: 1; } 85% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(100vw); opacity: 0; } }
+        .splash-fade-out { animation: fadeOut 0.5s forwards; pointer-events: none; }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
+        .form-slide-in { animation: slideIn 0.6s forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body class="relative h-screen w-full flex items-center justify-center">
 
-    <div id="splash-screen" class="fixed inset-0 bg-white z-[9999] flex flex-col items-center justify-center transition-opacity duration-700">
-        <div class="relative flex flex-col items-center">
-            <div class="w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-200 animate-zoom-out">
-                <img src="./assets/icons/logome.png" onerror="this.style.display='none'" class="w-14 h-14 object-contain" alt="Logo">
-            </div>
-            <div class="mt-6 text-center overflow-hidden">
-                <h1 class="text-2xl font-black text-gray-800 tracking-tight animate-slide-text">Mapel<span class="text-blue-600">Express</span></h1>
-                <p class="text-gray-400 text-sm font-bold tracking-widest mt-1 animate-slide-text" style="animation-delay: 0.1s">COURIER SERVICE</p>
-            </div>
-        </div>
-        <div class="absolute bottom-12 flex flex-col items-center gap-3">
-            <div class="flex gap-1">
-                <div class="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></div>
-                <div class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                <div class="w-1.5 h-1.5 bg-blue-200 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-            </div>
+    <div id="splash-screen" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center overflow-hidden">
+        <img src="/assets/icons/logome.png" class="w-40 h-40 object-contain animate-zoom-out drop-shadow-xl">
+        <div class="mt-4 w-full flex justify-center">
+            <h1 class="font-black text-3xl tracking-tight animate-slide-text drop-shadow-sm">
+                <span class="text-blue-800">Mapel</span><span class="text-red-600">Express</span>
+            </h1>
         </div>
     </div>
 
-    <div id="auth-container" class="hidden w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl shadow-blue-100 p-8 border border-gray-50 relative overflow-hidden">
-        <div class="absolute top-0 right-0 -mr-16 -mt-16 w-40 h-40 bg-blue-50 rounded-full opacity-50"></div>
-        
-        <div class="relative">
-            <div class="mb-10 text-center">
-                <h2 id="auth-title" class="text-3xl font-black text-gray-800 mb-2">Selamat Datang!</h2>
-                <p id="auth-subtitle" class="text-gray-500 font-medium">Masuk untuk mulai mengirim paket.</p>
-            </div>
-
-            <div id="form-login" class="space-y-5">
-                <div class="space-y-2">
-                    <label class="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
-                    <input type="email" id="login-email" placeholder="contoh@email.com" class="w-full bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl px-5 py-4 outline-none transition-all font-bold text-gray-700">
-                </div>
-                <div class="space-y-2">
-                    <label class="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Password</label>
-                    <input type="password" id="login-pass" placeholder="••••••••" class="w-full bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl px-5 py-4 outline-none transition-all font-bold text-gray-700">
-                </div>
-                <button onclick="prosesLogin()" id="btn-login" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-[0.98] transition-all mt-4">Masuk Sekarang</button>
-                <p class="text-center text-sm font-bold text-gray-500 mt-6">Belum punya akun? <span onclick="toggleForm('register')" class="text-blue-600 cursor-pointer hover:underline">Daftar disini</span></p>
-            </div>
-
-            <div id="form-register" class="hidden space-y-4">
-                <div class="space-y-1">
-                    <label class="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Nama Lengkap</label>
-                    <input type="text" id="reg-nama" placeholder="Masukkan nama anda" class="w-full bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl px-5 py-3.5 outline-none transition-all font-bold text-gray-700">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">No. WhatsApp</label>
-                    <input type="tel" id="reg-wa" placeholder="08123456xxx" class="w-full bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl px-5 py-3.5 outline-none transition-all font-bold text-gray-700">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Email</label>
-                    <input type="email" id="reg-email" placeholder="email@baru.com" class="w-full bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl px-5 py-3.5 outline-none transition-all font-bold text-gray-700">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Password</label>
-                    <input type="password" id="reg-pass" placeholder="Buat password" class="w-full bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl px-5 py-3.5 outline-none transition-all font-bold text-gray-700">
-                </div>
-                <button onclick="prosesDaftar()" id="btn-register" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 active:scale-[0.98] transition-all mt-4">Buat Akun</button>
-                <p class="text-center text-sm font-bold text-gray-500 mt-4">Sudah ada akun? <span onclick="toggleForm('login')" class="text-blue-600 cursor-pointer hover:underline">Masuk</span></p>
-            </div>
+    <main class="w-full max-w-md p-6 relative z-10 hidden" id="auth-container">
+        <div class="text-center mb-8">
+            <img src="/assets/icons/logome.png" class="h-16 mx-auto mb-3">
+            <h2 class="text-2xl font-black text-gray-800" id="auth-title">Selamat Datang!</h2>
+            <p class="text-sm text-gray-500 font-bold mt-1" id="auth-subtitle">Masuk untuk mulai mengirim paket.</p>
         </div>
-    </div>
+
+        <div id="form-login" class="space-y-5">
+            <input type="email" id="login-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Email">
+            <input type="password" id="login-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Password">
+            <button onclick="prosesLogin()" id="btn-login" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg">Masuk</button>
+            <p class="text-center text-sm font-bold text-gray-500 mt-6">Belum punya akun? <button onclick="toggleForm('register')" class="text-blue-600 font-bold">Daftar</button></p>
+        </div>
+
+        <div id="form-register" class="space-y-4 hidden">
+            <input type="text" id="reg-nama" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Nama Lengkap">
+            <input type="number" id="reg-wa" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="WA: 0812...">
+            <input type="email" id="reg-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Email">
+            <input type="password" id="reg-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Password">
+            <button onclick="prosesDaftar()" id="btn-register" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg">Buat Akun</button>
+            <p class="text-center text-sm font-bold text-gray-500 mt-6">Sudah punya akun? <button onclick="toggleForm('login')" class="text-blue-600 font-bold">Masuk</button></p>
+        </div>
+    </main>
 
     <script>
-        // GLOBAL VARIABLE
+        // 1. AMANKAN UI SPLASH SCREEN DULU (PINDAH KE ATAS)
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            if(splash) splash.classList.add('splash-fade-out');
+            setTimeout(() => {
+                if(splash) splash.style.display = 'none';
+                const authCont = document.getElementById('auth-container');
+                if(authCont) {
+                    authCont.classList.remove('hidden');
+                    authCont.classList.add('form-slide-in');
+                }
+            }, 500);
+        }, 3800);
+
+        // 2. BARU INIT DATABASE SUPABASE
         const SUPABASE_URL = 'https://nahgibyegdeioquryfde.supabase.co'; 
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
-        let supabase = null;
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // FUNGSI UTAMA UNTUK MENGHILANGKAN SPLASH SCREEN
-        // Dibungkus fungsi biar bisa dipanggil kapanpun bahkan saat error
-        function hideSplashScreen() {
-            const splash = document.getElementById('splash-screen');
-            const authContainer = document.getElementById('auth-container');
-            if(splash && authContainer) {
-                splash.style.opacity = '0';
-                setTimeout(() => {
-                    splash.style.display = 'none';
-                    authContainer.classList.remove('hidden');
-                    // Efek transisi masuk
-                    authContainer.style.opacity = '0';
-                    authContainer.style.transform = 'translateY(20px)';
-                    setTimeout(() => {
-                        authContainer.style.transition = 'all 0.6s ease';
-                        authContainer.style.opacity = '1';
-                        authContainer.style.transform = 'translateY(0)';
-                    }, 50);
-                }, 500);
-            }
-        }
-
-        // Jalankan timer splash screen sejak detik pertama
-        setTimeout(hideSplashScreen, 3800);
-
-        // INISIALISASI SUPABASE DENGAN PROTEKSI
-        window.onload = () => {
-            try {
-                if (typeof window.supabase !== 'undefined') {
-                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                    
-                    // Cek auto-login jika supabase siap
-                    supabase.auth.getSession().then(({ data, error }) => {
-                        if (data && data.session) {
-                            window.location.href = './app.html';
-                        }
-                    }).catch(err => console.log("Session check skipped"));
-                } else {
-                    console.error("Supabase SDK gagal dimuat dari CDN");
-                }
-            } catch (e) {
-                console.error("Error init:", e);
-            }
-        };
-
-        // FUNGSI AUTH (SAMA DENGAN ASLINYA, HANYA RE-ORDER)
         function toggleForm(t) {
             document.getElementById('form-login').classList.toggle('hidden', t === 'register');
             document.getElementById('form-register').classList.toggle('hidden', t === 'login');
@@ -147,31 +88,22 @@
             
             if(!email || !pass) return alert("Isi email dan password bos!");
             
-            btn.innerText = "Memverifikasi...";
-            btn.disabled = true;
+            btn.innerText = "Memverifikasi..."; btn.disabled = true;
 
-            // Admin Shortcut
+            // Hardcode Admin
             if(email === 'MapelEx@admin' && pass === 'mapel2026') {
-                window.location.href = './admin.html';
-                return;
-            }
-
-            if(!supabase) {
-                alert("Database tidak terjangkau. Periksa koneksi internet lu.");
-                btn.innerText = "Masuk Sekarang";
-                btn.disabled = false;
+                window.location.href = '/admin.html';
                 return;
             }
 
             const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
             if (error) {
-                alert("Login Gagal! Akun tidak ditemukan atau password salah.");
-                btn.innerText = "Masuk Sekarang";
-                btn.disabled = false;
+                alert("Login Gagal! Cek lagi email/password lu.");
+                btn.innerText = "Masuk"; btn.disabled = false;
                 return;
             }
             
-            window.location.href = './app.html';
+            window.location.href = '/app.html';
         }
 
         async function prosesDaftar() {
@@ -183,21 +115,13 @@
 
             if(!email || !pass || !nama || !wa) return alert("Lengkapi semua data!");
 
-            btn.innerText = "Membuat Akun...";
-            btn.disabled = true;
-
-            if(!supabase) {
-                alert("Sistem sedang sibuk. Coba lagi nanti.");
-                btn.disabled = false;
-                return;
-            }
+            btn.innerText = "Membuat Akun..."; btn.disabled = true;
 
             const { data, error } = await supabase.auth.signUp({ email, password: pass });
             
             if (error) {
                 alert(error.message);
-                btn.innerText = "Buat Akun";
-                btn.disabled = false;
+                btn.innerText = "Buat Akun"; btn.disabled = false;
                 return;
             }
 
@@ -206,8 +130,7 @@
                 alert("Berhasil! Silakan masuk dengan akun barumu.");
                 toggleForm('login');
             }
-            btn.innerText = "Buat Akun";
-            btn.disabled = false;
+            btn.innerText = "Buat Akun"; btn.disabled = false;
         }
     </script>
 </body>
