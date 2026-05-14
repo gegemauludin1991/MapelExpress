@@ -20,7 +20,7 @@
     <div id="splash-screen" class="fixed inset-0 bg-white z-[9999] flex flex-col items-center justify-center transition-opacity duration-700">
         <div class="relative flex flex-col items-center">
             <div class="w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-200 animate-zoom-out">
-                <img src="./assets/icons/logome.png" class="w-14 h-14 object-contain" alt="Logo">
+                <img src="./assets/icons/logome.png" onerror="this.style.display='none'" class="w-14 h-14 object-contain" alt="Logo">
             </div>
             <div class="mt-6 text-center overflow-hidden">
                 <h1 class="text-2xl font-black text-gray-800 tracking-tight animate-slide-text">Mapel<span class="text-blue-600">Express</span></h1>
@@ -82,50 +82,57 @@
     </div>
 
     <script>
-        // 1. LOGIC SPLASH SCREEN (DIJALANKAN PALING AWAL)
-        setTimeout(() => {
+        // GLOBAL VARIABLE
+        const SUPABASE_URL = 'https://nahgibyegdeioquryfde.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
+        let supabase = null;
+
+        // FUNGSI UTAMA UNTUK MENGHILANGKAN SPLASH SCREEN
+        // Dibungkus fungsi biar bisa dipanggil kapanpun bahkan saat error
+        function hideSplashScreen() {
             const splash = document.getElementById('splash-screen');
             const authContainer = document.getElementById('auth-container');
-            
             if(splash && authContainer) {
                 splash.style.opacity = '0';
                 setTimeout(() => {
                     splash.style.display = 'none';
-                    
+                    authContainer.classList.remove('hidden');
+                    // Efek transisi masuk
                     authContainer.style.opacity = '0';
                     authContainer.style.transform = 'translateY(20px)';
-                    authContainer.style.transition = 'all 0.6s ease';
-                    authContainer.classList.remove('hidden');
-                    
-                    void authContainer.offsetWidth; // Repaint trigger
-                    
-                    authContainer.style.opacity = '1';
-                    authContainer.style.transform = 'translateY(0)';
+                    setTimeout(() => {
+                        authContainer.style.transition = 'all 0.6s ease';
+                        authContainer.style.opacity = '1';
+                        authContainer.style.transform = 'translateY(0)';
+                    }, 50);
                 }, 500);
             }
-        }, 3800);
-
-        // 2. INISIALISASI SUPABASE (DENGAN SAFE-CHECK)
-        const SUPABASE_URL = 'https://nahgibyegdeioquryfde.supabase.co'; 
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
-        let supabase;
-
-        try {
-            if (window.supabase) {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                
-                // Cek Session: Jika sudah login, langsung lempar ke app.html
-                supabase.auth.getSession().then(({ data: { session } }) => {
-                    if (session) {
-                        window.location.href = './app.html';
-                    }
-                });
-            }
-        } catch (e) {
-            console.error("Gagal memuat Supabase:", e);
         }
 
-        // 3. FUNGSI UI & AUTH (STRUKTUR ASLI TETAP DIJAGA)
+        // Jalankan timer splash screen sejak detik pertama
+        setTimeout(hideSplashScreen, 3800);
+
+        // INISIALISASI SUPABASE DENGAN PROTEKSI
+        window.onload = () => {
+            try {
+                if (typeof window.supabase !== 'undefined') {
+                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    
+                    // Cek auto-login jika supabase siap
+                    supabase.auth.getSession().then(({ data, error }) => {
+                        if (data && data.session) {
+                            window.location.href = './app.html';
+                        }
+                    }).catch(err => console.log("Session check skipped"));
+                } else {
+                    console.error("Supabase SDK gagal dimuat dari CDN");
+                }
+            } catch (e) {
+                console.error("Error init:", e);
+            }
+        };
+
+        // FUNGSI AUTH (SAMA DENGAN ASLINYA, HANYA RE-ORDER)
         function toggleForm(t) {
             document.getElementById('form-login').classList.toggle('hidden', t === 'register');
             document.getElementById('form-register').classList.toggle('hidden', t === 'login');
@@ -143,17 +150,22 @@
             btn.innerText = "Memverifikasi...";
             btn.disabled = true;
 
-            // Shortcut Admin
+            // Admin Shortcut
             if(email === 'MapelEx@admin' && pass === 'mapel2026') {
                 window.location.href = './admin.html';
                 return;
             }
 
-            if(!supabase) return alert("Database belum siap, coba lagi nanti.");
+            if(!supabase) {
+                alert("Database tidak terjangkau. Periksa koneksi internet lu.");
+                btn.innerText = "Masuk Sekarang";
+                btn.disabled = false;
+                return;
+            }
 
             const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
             if (error) {
-                alert("Login Gagal! Cek lagi email/password lu.");
+                alert("Login Gagal! Akun tidak ditemukan atau password salah.");
                 btn.innerText = "Masuk Sekarang";
                 btn.disabled = false;
                 return;
@@ -174,7 +186,11 @@
             btn.innerText = "Membuat Akun...";
             btn.disabled = true;
 
-            if(!supabase) return alert("Database belum siap.");
+            if(!supabase) {
+                alert("Sistem sedang sibuk. Coba lagi nanti.");
+                btn.disabled = false;
+                return;
+            }
 
             const { data, error } = await supabase.auth.signUp({ email, password: pass });
             
