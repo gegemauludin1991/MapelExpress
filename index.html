@@ -17,7 +17,7 @@
 </head>
 <body class="relative h-screen w-full flex items-center justify-center">
 
-    <div id="splash-screen" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center overflow-hidden transition-opacity duration-500">
+    <div id="splash-screen" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center overflow-hidden" style="transition: opacity 0.5s ease;">
         <img src="./assets/icons/logome.png" class="w-40 h-40 object-contain animate-zoom-out drop-shadow-xl">
         <div class="mt-4 w-full flex justify-center">
             <h1 class="font-black text-3xl tracking-tight animate-slide-text drop-shadow-sm">
@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <main class="w-full max-w-md p-6 relative z-10 hidden opacity-0 transition-all duration-500 transform translate-y-5" id="auth-container">
+    <main class="w-full max-w-md p-6 relative z-10 hidden" id="auth-container">
         <div class="text-center mb-8">
             <img src="./assets/icons/logome.png" class="h-16 mx-auto mb-3">
             <h2 class="text-2xl font-black text-gray-800" id="auth-title">Selamat Datang!</h2>
@@ -36,7 +36,7 @@
         <div id="form-login" class="space-y-5">
             <input type="email" id="login-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Email">
             <input type="password" id="login-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Password">
-            <button onclick="prosesLogin()" id="btn-login" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg transition-transform">Masuk</button>
+            <button onclick="prosesLogin()" id="btn-login" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg">Masuk</button>
             <p class="text-center text-sm font-bold text-gray-500 mt-6">Belum punya akun? <button onclick="toggleForm('register')" class="text-blue-600 font-bold hover:underline">Daftar</button></p>
         </div>
 
@@ -45,7 +45,7 @@
             <input type="number" id="reg-wa" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="WA: 0812...">
             <input type="email" id="reg-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Email">
             <input type="password" id="reg-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Password">
-            <button onclick="prosesDaftar()" id="btn-register" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg transition-transform">Buat Akun</button>
+            <button onclick="prosesDaftar()" id="btn-register" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg">Buat Akun</button>
             <p class="text-center text-sm font-bold text-gray-500 mt-6">Sudah punya akun? <button onclick="toggleForm('login')" class="text-blue-600 font-bold hover:underline">Masuk</button></p>
         </div>
     </main>
@@ -55,7 +55,7 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Logic transisi yang lebih stabil (Anti Blank)
+        // LOGIC SPLASH SCREEN ANTI-BLANK
         setTimeout(() => {
             const splash = document.getElementById('splash-screen');
             const authContainer = document.getElementById('auth-container');
@@ -63,13 +63,18 @@
             splash.style.opacity = '0';
             setTimeout(() => {
                 splash.style.display = 'none';
+                
+                authContainer.style.opacity = '0';
+                authContainer.style.transform = 'translateY(20px)';
+                authContainer.style.transition = 'all 0.6s ease';
                 authContainer.classList.remove('hidden');
-                // Force flow trigger baru panggil opacity
-                void authContainer.offsetWidth; 
+                
+                void authContainer.offsetWidth;
+                
                 authContainer.style.opacity = '1';
                 authContainer.style.transform = 'translateY(0)';
             }, 500);
-        }, 3200);
+        }, 3800);
 
         function toggleForm(t) {
             document.getElementById('form-login').classList.toggle('hidden', t === 'register');
@@ -88,18 +93,18 @@
             btn.innerText = "Memverifikasi..."; btn.disabled = true;
 
             if(email === 'MapelEx@admin' && pass === 'mapel2026') {
-                window.location.href = './admin.html'; // <- ROUTE FIX
+                window.location.href = './admin.html';
                 return;
             }
 
-            const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
             if (error) {
                 alert("Login Gagal! Cek lagi email/password lu.");
                 btn.innerText = "Masuk"; btn.disabled = false;
                 return;
             }
             
-            window.location.href = './app.html'; // <- ROUTE FIX
+            window.location.href = './app.html';
         }
 
         async function prosesDaftar() {
