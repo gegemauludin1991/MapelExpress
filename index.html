@@ -21,8 +21,8 @@
 </head>
 <body class="relative h-screen w-full flex items-center justify-center">
 
+    <!-- Splash Screen UI -->
     <div id="splash-screen" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center overflow-hidden">
-        <!-- Logo sementara kalau gambar eror, fallback ke file lokal, kalau error pakai SVG bawaan -->
         <img src="/assets/icons/logome.png" class="w-40 h-40 object-contain animate-zoom-out drop-shadow-xl" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjU2M0VCIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik0xMiAyTDIgN2wxMCA1IDEwLTVMMTIgMnoiLz48L3N2Zz4='">
         <div class="mt-4 w-full flex justify-center">
             <h1 class="font-black text-3xl tracking-tight animate-slide-text drop-shadow-sm">
@@ -31,6 +31,7 @@
         </div>
     </div>
 
+    <!-- Login/Register Form -->
     <main class="w-full max-w-md p-6 relative z-10 hidden" id="auth-container">
         <div class="text-center mb-8">
             <img src="/assets/icons/logome.png" class="h-16 mx-auto mb-3" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjU2M0VCIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik0xMiAyTDIgN2wxMCA1IDEwLTVMMTIgMnoiLz48L3N2Zz4='">
@@ -38,6 +39,7 @@
             <p class="text-sm text-gray-500 font-bold mt-1" id="auth-subtitle">Masuk untuk mulai mengirim paket.</p>
         </div>
 
+        <!-- Mode Login -->
         <div id="form-login" class="space-y-5">
             <input type="email" id="login-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Email">
             <input type="password" id="login-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Password">
@@ -45,6 +47,7 @@
             <p class="text-center text-sm font-bold text-gray-500 mt-6">Belum punya akun? <button onclick="toggleForm('register')" class="text-blue-600 font-bold">Daftar</button></p>
         </div>
 
+        <!-- Mode Register -->
         <div id="form-register" class="space-y-4 hidden">
             <input type="text" id="reg-nama" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Nama Lengkap">
             <input type="number" id="reg-wa" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="WA: 0812...">
@@ -57,40 +60,66 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. Splash Screen Timer
+            // 1. AMANKAN UI SPLASH SCREEN DULU
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
                 if(splash) splash.classList.add('splash-fade-out');
+                
                 setTimeout(() => {
                     if(splash) splash.style.display = 'none';
+                    
                     const authCont = document.getElementById('auth-container');
                     if(authCont) {
                         authCont.classList.remove('hidden');
+                        authCont.classList.add('flex', 'flex-col'); // Fallback form positioning
                         authCont.classList.add('form-slide-in');
+                        authCont.style.display = 'block'; // Jaga-jaga jikau 'hidden' tertahan di sistem
                     }
                 }, 500);
-            }, 3800);
+            }, 3000); // 3 DETIK (DIPERCEPAT BIAR GA KELAMAAN BLANK)
         });
 
-        // 2. Init Database Supabase (Library CDN-nya sudah diganti agar tidak diblokir web)
+        // 2. INIT DATABASE SUPABASE DENGAN ERROR HANDLING 
         const SUPABASE_URL = 'https://nahgibyegdeioquryfde.supabase.co'; 
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
-        let supabase;
+        let supabaseClient;
+        
         try {
-            // Memastikan library supabase termuat
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            if (window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } else {
+                console.warn("Supabase library not loaded yet.");
+            }
         } catch(e) {
             console.error('Supabase init failed:', e);
         }
 
+        // FUNGSI GANTI MENU LOGIN <-> DAFTAR
         function toggleForm(t) {
-            document.getElementById('form-login').classList.toggle('hidden', t === 'register');
-            document.getElementById('form-register').classList.toggle('hidden', t === 'login');
+            const formLogin = document.getElementById('form-login');
+            const formRegister = document.getElementById('form-register');
+            
+            if(t === 'register') {
+                formLogin.style.display = 'none';
+                formRegister.style.display = 'block';
+            } else {
+                formLogin.style.display = 'block';
+                formRegister.style.display = 'none';
+            }
+            
             document.getElementById('auth-title').innerText = t === 'register' ? 'Buat Akun' : 'Selamat Datang!';
             document.getElementById('auth-subtitle').innerText = t === 'register' ? 'Daftar untuk nikmati layanan kami.' : 'Masuk untuk mulai mengirim paket.';
         }
 
+        // FUNGSI JAGA-JAGA KALO SUPABASE TELAT LOAD DARI INTERNET
+        function ensureSupabase() {
+            if (!supabaseClient && window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+        }
+
         async function prosesLogin() {
+            ensureSupabase();
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-pass').value;
             const btn = document.getElementById('btn-login');
@@ -105,18 +134,24 @@
                 return;
             }
 
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+            if (!supabaseClient) {
+                alert("Koneksi gagal / Supabase belum siap memuat!");
+                btn.innerText = "Masuk"; btn.disabled = false;
+                return;
+            }
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
             if (error) {
                 alert("Login Gagal! Cek lagi email/password lu.");
                 btn.innerText = "Masuk"; btn.disabled = false;
                 return;
             }
             
-            // Redirect ke halaman app utama
             window.location.href = '/app.html';
         }
 
         async function prosesDaftar() {
+            ensureSupabase();
             const email = document.getElementById('reg-email').value;
             const pass = document.getElementById('reg-pass').value;
             const nama = document.getElementById('reg-nama').value;
@@ -127,7 +162,13 @@
 
             btn.innerText = "Membuat Akun..."; btn.disabled = true;
 
-            const { data, error } = await supabase.auth.signUp({ email, password: pass });
+            if (!supabaseClient) {
+                alert("Koneksi gagal / Supabase belum siap memuat!");
+                btn.innerText = "Buat Akun"; btn.disabled = false;
+                return;
+            }
+
+            const { data, error } = await supabaseClient.auth.signUp({ email, password: pass });
             
             if (error) {
                 alert(error.message);
@@ -136,7 +177,8 @@
             }
 
             if (data.user) {
-                await supabase.from('profiles').insert([{ id: data.user.id, full_name: nama, whatsapp: wa }]);
+                // Masukkan nama dan WA ke tabel Profiles di database
+                await supabaseClient.from('profiles').insert([{ id: data.user.id, full_name: nama, whatsapp: wa }]);
                 alert("Berhasil! Silakan masuk dengan akun barumu.");
                 toggleForm('login');
             }
