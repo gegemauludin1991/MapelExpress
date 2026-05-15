@@ -8,102 +8,123 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Nunito', sans-serif; background-color: #F8FAFC; overflow: hidden; }
-        .animate-zoom-out { animation: zoomOutIcon 4s cubic-bezier(0.25, 1, 0.3, 1) forwards; }
-        @keyframes zoomOutIcon { 0% { transform: scale(1.5); opacity: 0; } 20% { transform: scale(1); opacity: 1; } 85% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.85); opacity: 0; } }
-        .animate-slide-text { animation: slideText 4s cubic-bezier(0.25, 1, 0.3, 1) forwards; display: inline-block; }
-        @keyframes slideText { 0% { transform: translateX(-100vw); opacity: 0; } 20% { transform: translateX(0); opacity: 1; } 85% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(100vw); opacity: 0; } }
-        .splash-fade-out { animation: fadeOut 0.5s forwards; pointer-events: none; }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
-        .form-slide-in { animation: slideIn 0.6s forwards; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        body { font-family: 'Nunito', sans-serif; background-color: #F8FAFC; overflow: hidden; margin: 0; }
+        
+        /* Splash Screen Layer */
+        #splash-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .animate-zoom-out { animation: zoomOutIcon 2s ease-in-out forwards; }
+        @keyframes zoomOutIcon { 0% { transform: scale(1.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        .hidden { display: none !important; }
     </style>
 </head>
-<body class="relative h-screen w-full flex items-center justify-center">
+<body class="relative h-screen w-full">
 
-    <div id="splash-screen" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center overflow-hidden">
-        <img src="/assets/icons/logome.png" class="w-40 h-40 object-contain animate-zoom-out drop-shadow-xl">
-        <div class="mt-4 w-full flex justify-center">
-            <h1 class="font-black text-3xl tracking-tight animate-slide-text drop-shadow-sm">
-                <span class="text-blue-800">Mapel</span><span class="text-red-600">Express</span>
-            </h1>
+    <div id="splash-screen">
+        <div class="animate-zoom-out mb-4">
+            <img src="./assets/logo.png" alt="Logo" class="w-24 h-24 object-contain" onerror="this.src='https://via.placeholder.com/100?text=MAPEL'">
+        </div>
+        <h1 class="text-2xl font-black text-gray-800 tracking-tighter">MAPEL<span class="text-blue-600">EXPRESS</span></h1>
+    </div>
+
+    <div id="main-content" class="hidden h-full w-full flex flex-col p-6 justify-center">
+        <div id="login-form" class="">
+            <h2 class="text-3xl font-black text-gray-800 mb-2">Selamat Datang!</h2>
+            <p class="text-gray-500 mb-8">Masuk ke akun MapelExpress lu</p>
+            
+            <input type="email" id="log-email" placeholder="Email" class="w-full mb-4 p-4 rounded-2xl bg-gray-100 border-none focus:ring-2 focus:ring-blue-500 outline-none">
+            <input type="password" id="log-pass" placeholder="Password" class="w-full mb-6 p-4 rounded-2xl bg-gray-100 border-none focus:ring-2 focus:ring-blue-500 outline-none">
+            
+            <button id="btn-login" onclick="prosesLogin()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">Masuk Sekarang</button>
+            
+            <p class="text-center mt-8 text-gray-600 text-sm">
+                Belum punya akun? <span onclick="toggleForm('reg')" class="text-blue-600 font-bold cursor-pointer">Daftar</span>
+            </p>
+        </div>
+
+        <div id="reg-form" class="hidden">
+            <h2 class="text-3xl font-black text-gray-800 mb-2">Buat Akun</h2>
+            <p class="text-gray-500 mb-6">Lengkapi data diri lu</p>
+            
+            <input type="text" id="reg-nama" placeholder="Nama Lengkap" class="w-full mb-3 p-4 rounded-2xl bg-gray-100 border-none outline-none">
+            <input type="email" id="reg-email" placeholder="Email Aktif" class="w-full mb-3 p-4 rounded-2xl bg-gray-100 border-none outline-none">
+            <input type="password" id="reg-pass" placeholder="Buat Password" class="w-full mb-3 p-4 rounded-2xl bg-gray-100 border-none outline-none">
+            <input type="number" id="reg-wa" placeholder="No. WhatsApp (Contoh: 0812...)" class="w-full mb-6 p-4 rounded-2xl bg-gray-100 border-none outline-none">
+            
+            <button id="btn-register" onclick="prosesDaftar()" class="w-full bg-gray-800 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">Buat Akun</button>
+            
+            <p class="text-center mt-6 text-gray-600 text-sm">
+                Sudah ada akun? <span onclick="toggleForm('login')" class="text-blue-600 font-bold cursor-pointer">Masuk</span>
+            </p>
         </div>
     </div>
 
-    <main class="w-full max-w-md p-6 relative z-10 hidden" id="auth-container">
-        <div class="text-center mb-8">
-            <img src="/assets/icons/logome.png" class="h-16 mx-auto mb-3">
-            <h2 class="text-2xl font-black text-gray-800" id="auth-title">Selamat Datang!</h2>
-            <p class="text-sm text-gray-500 font-bold mt-1" id="auth-subtitle">Masuk untuk mulai mengirim paket.</p>
-        </div>
-
-        <div id="form-login" class="space-y-5">
-            <input type="email" id="login-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Email">
-            <input type="password" id="login-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Password">
-            <button onclick="prosesLogin()" id="btn-login" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg">Masuk</button>
-            <p class="text-center text-sm font-bold text-gray-500 mt-6">Belum punya akun? <button onclick="toggleForm('register')" class="text-blue-600 font-bold">Daftar</button></p>
-        </div>
-
-        <div id="form-register" class="space-y-4 hidden">
-            <input type="text" id="reg-nama" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Nama Lengkap">
-            <input type="number" id="reg-wa" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="WA: 0812...">
-            <input type="email" id="reg-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Email">
-            <input type="password" id="reg-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Password">
-            <button onclick="prosesDaftar()" id="btn-register" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg">Buat Akun</button>
-            <p class="text-center text-sm font-bold text-gray-500 mt-6">Sudah punya akun? <button onclick="toggleForm('login')" class="text-blue-600 font-bold">Masuk</button></p>
-        </div>
-    </main>
-
     <script>
-        // 1. AMANKAN UI SPLASH SCREEN DULU (PINDAH KE ATAS)
-        setTimeout(() => {
-            const splash = document.getElementById('splash-screen');
-            if(splash) splash.classList.add('splash-fade-out');
-            setTimeout(() => {
-                if(splash) splash.style.display = 'none';
-                const authCont = document.getElementById('auth-container');
-                if(authCont) {
-                    authCont.classList.remove('hidden');
-                    authCont.classList.add('form-slide-in');
-                }
-            }, 500);
-        }, 3800);
-
-        // 2. BARU INIT DATABASE SUPABASE
+        // Konfigurasi Supabase (Sesuaikan dengan data lu)
         const SUPABASE_URL = 'https://nahgibyegdeioquryfde.supabase.co'; 
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // Gunakan Key Lu yang Lengkap
+        const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-        function toggleForm(t) {
-            document.getElementById('form-login').classList.toggle('hidden', t === 'register');
-            document.getElementById('form-register').classList.toggle('hidden', t === 'login');
-            document.getElementById('auth-title').innerText = t === 'register' ? 'Buat Akun' : 'Selamat Datang!';
-            document.getElementById('auth-subtitle').innerText = t === 'register' ? 'Daftar untuk nikmati layanan kami.' : 'Masuk untuk mulai mengirim paket.';
+        // Cek apakah supabase berhasil diload
+        if (!supabase) {
+            console.error("Gagal memuat Supabase SDK. Cek koneksi internet.");
+        }
+
+        // Jalankan transisi splash screen
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                const main = document.getElementById('main-content');
+                
+                splash.style.opacity = '0';
+                setTimeout(() => {
+                    splash.classList.add('hidden');
+                    main.classList.remove('hidden');
+                }, 500);
+            }, 3000); // Tampil splash 3 detik
+        });
+
+        function toggleForm(type) {
+            const login = document.getElementById('login-form');
+            const reg = document.getElementById('reg-form');
+            if(type === 'reg') {
+                login.classList.add('hidden');
+                reg.classList.remove('hidden');
+            } else {
+                reg.classList.add('hidden');
+                login.classList.remove('hidden');
+            }
         }
 
         async function prosesLogin() {
-            const email = document.getElementById('login-email').value;
-            const pass = document.getElementById('login-pass').value;
+            const email = document.getElementById('log-email').value;
+            const pass = document.getElementById('log-pass').value;
             const btn = document.getElementById('btn-login');
-            
-            if(!email || !pass) return alert("Isi email dan password bos!");
-            
-            btn.innerText = "Memverifikasi..."; btn.disabled = true;
 
-            // Hardcode Admin
-            if(email === 'MapelEx@admin' && pass === 'mapel2026') {
-                window.location.href = '/admin.html';
-                return;
-            }
+            if(!email || !pass) return alert("Isi dulu email sama password-nya bro!");
 
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-            if (error) {
-                alert("Login Gagal! Cek lagi email/password lu.");
-                btn.innerText = "Masuk"; btn.disabled = false;
-                return;
+            btn.innerText = "Memverifikasi...";
+            btn.disabled = true;
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+                if (error) throw error;
+                
+                window.location.href = './app.html';
+            } catch (err) {
+                alert("Login Gagal: " + err.message);
+                btn.innerText = "Masuk Sekarang";
+                btn.disabled = false;
             }
-            
-            window.location.href = '/app.html';
         }
 
         async function prosesDaftar() {
@@ -113,24 +134,26 @@
             const wa = document.getElementById('reg-wa').value;
             const btn = document.getElementById('btn-register');
 
-            if(!email || !pass || !nama || !wa) return alert("Lengkapi semua data!");
+            if(!email || !pass || !nama || !wa) return alert("Semua data wajib diisi!");
 
-            btn.innerText = "Membuat Akun..."; btn.disabled = true;
+            btn.innerText = "Mendaftarkan...";
+            btn.disabled = true;
 
-            const { data, error } = await supabase.auth.signUp({ email, password: pass });
-            
-            if (error) {
-                alert(error.message);
-                btn.innerText = "Buat Akun"; btn.disabled = false;
-                return;
+            try {
+                const { data, error } = await supabase.auth.signUp({ email, password: pass });
+                if (error) throw error;
+
+                if (data.user) {
+                    await supabase.from('profiles').insert([{ id: data.user.id, full_name: nama, whatsapp: wa }]);
+                    alert("Pendaftaran Berhasil! Silakan login.");
+                    toggleForm('login');
+                }
+            } catch (err) {
+                alert("Gagal Daftar: " + err.message);
+            } finally {
+                btn.innerText = "Buat Akun";
+                btn.disabled = false;
             }
-
-            if (data.user) {
-                await supabase.from('profiles').insert([{ id: data.user.id, full_name: nama, whatsapp: wa }]);
-                alert("Berhasil! Silakan masuk dengan akun barumu.");
-                toggleForm('login');
-            }
-            btn.innerText = "Buat Akun"; btn.disabled = false;
         }
     </script>
 </body>
