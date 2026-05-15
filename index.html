@@ -30,14 +30,15 @@
         </div>
     </div>
 
-    <main class="w-full max-w-md p-6 relative z-10 hidden" id="auth-container">
-        <div class="text-center mb-8">
-            <img src="/assets/icons/logome.png" class="h-16 mx-auto mb-3" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjU2M0VCIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik0xMiAyTDIgN2wxMCA1IDEwLTVMMTIgMnoiLz48L3N2Zz4='">
-            <h2 class="text-2xl font-black text-gray-800" id="auth-title">Selamat Datang!</h2>
-            <p class="text-sm text-gray-500 font-bold mt-1" id="auth-subtitle">Masuk untuk mulai mengirim paket.</p>
+    <!-- Container Auth -->
+    <div id="auth-container" class="hidden w-full max-w-sm px-6 pb-20 pt-10 h-full overflow-y-auto">
+        <div class="mb-8 text-center pb-8 border-b-2 border-dashed border-gray-200">
+            <h2 id="auth-title" class="text-3xl font-black text-blue-800">Selamat Datang!</h2>
+            <p id="auth-subtitle" class="text-gray-500 font-bold mt-1 text-sm">Masuk untuk mulai mengirim paket.</p>
         </div>
 
-        <div id="form-login" class="space-y-5">
+        <!-- FORM LOGIN -->
+        <div id="form-login" class="space-y-4">
             <input type="email" id="login-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Email">
             <input type="password" id="login-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Password">
             <button onclick="prosesLogin()" id="btn-login" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg">Masuk</button>
@@ -52,24 +53,24 @@
             <p class="text-center text-sm font-bold text-gray-500 mt-6">Belum punya akun? <button onclick="toggleForm('register')" class="text-blue-600 font-bold">Daftar</button></p>
         </div>
 
+        <!-- FORM REGISTER -->
         <div id="form-register" class="space-y-4 hidden">
-            <input type="text" id="reg-nama" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Nama Lengkap">
-            <input type="number" id="reg-wa" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="WA: 0812...">
-            <input type="email" id="reg-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Email">
-            <input type="password" id="reg-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500" placeholder="Password">
+            <input type="text" id="reg-nama" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Nama Lengkap">
+            <input type="email" id="reg-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Email">
+            <input type="tel" id="reg-wa" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="No. WhatsApp (Awali 62)">
+            <input type="password" id="reg-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Password (Min 6 Karakter)">
             <button onclick="prosesDaftar()" id="btn-register" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg">Buat Akun</button>
             <p class="text-center text-sm font-bold text-gray-500 mt-6">Sudah punya akun? <button onclick="toggleForm('login')" class="text-blue-600 font-bold">Masuk</button></p>
         </div>
-    </main>
+    </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // 1. AMANKAN UI SPLASH SCREEN DULU (PINDAH KE ATAS)
+        document.addEventListener("DOMContentLoaded", () => {
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
-                if(splash) splash.classList.add('splash-fade-out');
+                splash.classList.add('splash-fade-out');
                 setTimeout(() => {
-                    if(splash) splash.style.display = 'none';
+                    splash.style.display = 'none';
                     const authCont = document.getElementById('auth-container');
                     if(authCont) {
                         authCont.classList.remove('hidden');
@@ -127,6 +128,9 @@
             }
             const { data, error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
+                options: {
+                    redirectTo: window.location.origin + '/app.html'
+                }
             });
             if (error) {
                 alert("Login Google Gagal: " + error.message);
