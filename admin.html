@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
         body { font-family: 'Nunito', sans-serif; background-color: #F8FAFC; overflow: hidden; }
         .sidebar-item.active { background-color: #EFF6FF; color: #2563EB; border-right: 4px solid #2563EB; }
@@ -94,7 +96,7 @@
                             </div>
                         </div>
                         <div id="radar-detail-content" class="p-4 overflow-y-auto content-scroll text-sm hidden">
-                            </div>
+                        </div>
                     </div>
 
                     <div id="panel-ekslist" class="dropdown-panel bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 flex-col overflow-hidden pointer-events-auto max-h-[50vh]">
@@ -102,7 +104,7 @@
                             <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Daftar Titik (Klik untuk menuju lokasi)</p>
                         </div>
                         <div id="radar-eks-list" class="overflow-y-auto content-scroll flex-1 p-2 space-y-1">
-                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -22,7 +22,7 @@
 <body class="relative h-screen w-full flex items-center justify-center">
 
     <div id="splash-screen" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center overflow-hidden">
-        <img src="/assets/icons/logome.png" class="w-40 h-40 object-contain animate-zoom-out drop-shadow-xl" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjU2M0VCIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik0xMiAyTDIgN2wxMCA1IDEwLTVMMTIgMnoiLz48L3N2Zz4='">
+        <img src="./assets/icons/logome.png" class="w-40 h-40 object-contain animate-zoom-out drop-shadow-xl" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjU2M0VCIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik0xMiAyTDIgN2wxMCA1IDEwLTVMMTIgMnoiLz48L3N2Zz4='">
         <div class="mt-4 w-full flex justify-center">
             <h1 class="font-black text-3xl tracking-tight animate-slide-text drop-shadow-sm">
                 <span class="text-blue-800">Mapel</span><span class="text-red-600">Express</span>
@@ -30,16 +30,14 @@
         </div>
     </div>
 
-    <!-- Container Auth -->
     <div id="auth-container" class="hidden w-full max-w-sm px-6 pb-20 pt-10 h-full overflow-y-auto">
         <div class="mb-8 text-center pb-8 border-b-2 border-dashed border-gray-200">
             <h2 id="auth-title" class="text-3xl font-black text-blue-800">Selamat Datang!</h2>
             <p id="auth-subtitle" class="text-gray-500 font-bold mt-1 text-sm">Masuk untuk mulai mengirim paket.</p>
         </div>
 
-        <!-- FORM LOGIN -->
         <div id="form-login" class="space-y-4">
-            <input type="email" id="login-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Email">
+            <input type="text" id="login-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Email / Username Driver">
             <input type="password" id="login-pass" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Password">
             <button onclick="prosesLogin()" id="btn-login" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg active:scale-95 text-lg">Masuk</button>
             <div class="relative flex items-center justify-center mt-6 mb-6">
@@ -53,7 +51,6 @@
             <p class="text-center text-sm font-bold text-gray-500 mt-6">Belum punya akun? <button onclick="toggleForm('register')" class="text-blue-600 font-bold">Daftar</button></p>
         </div>
 
-        <!-- FORM REGISTER -->
         <div id="form-register" class="space-y-4 hidden">
             <input type="text" id="reg-nama" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Nama Lengkap">
             <input type="email" id="reg-email" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500" placeholder="Email">
@@ -74,25 +71,21 @@
                     const authCont = document.getElementById('auth-container');
                     if(authCont) {
                         authCont.classList.remove('hidden');
-                        authCont.classList.add('flex', 'flex-col'); // Pastikan dia menggunakan flex jika perlu, atau block biasa
+                        authCont.classList.add('flex', 'flex-col'); 
                         authCont.classList.add('form-slide-in');
-                        authCont.style.display = 'block'; // Jaga-jaga override
+                        authCont.style.display = 'block'; 
                     }
                 }, 500);
-            }, 3000); // Percepat jadi 3 detik saja supaya gak nunggu lama
+            }, 3000); 
         });
 
-        // 2. BARU INIT DATABASE SUPABASE
+        // INIT DATABASE SUPABASE
         const SUPABASE_URL = 'https://nahgibyegdeioquryfde.supabase.co'; 
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
         let supabaseClient;
         try {
             if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            } else {
-                console.warn("Supabase library not loaded yet.");
-                // Jika lambat loading dari unpkg, mungkin supabase belum diinit
-                // Nanti kita bisa init pas function dipencet
             }
         } catch(e) {
             console.error('Supabase init failed:', e);
@@ -122,20 +115,15 @@
 
         async function loginGoogle() {
             ensureSupabase();
-            if (!supabaseClient) {
-                alert("Koneksi gagal / Supabase belum siap!");
-                return;
-            }
+            if (!supabaseClient) return alert("Koneksi gagal / Supabase belum siap!");
+            
             const { data, error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
                     redirectTo: window.location.origin + '/app.html'
                 }
             });
-            if (error) {
-                alert("Login Google Gagal: " + error.message);
-                return;
-            }
+            if (error) alert("Login Google Gagal: " + error.message);
         }
 
         async function prosesLogin() {
@@ -144,11 +132,11 @@
             const pass = document.getElementById('login-pass').value;
             const btn = document.getElementById('btn-login');
             
-            if(!email || !pass) return alert("Isi email dan password bos!");
+            if(!email || !pass) return alert("Isi email/username dan password bos!");
             
             btn.innerText = "Memverifikasi..."; btn.disabled = true;
 
-            // Hardcode Admin
+            // 1. Cek Hardcode Admin
             if(email === 'MapelEx@admin' && pass === 'mapel2026') {
                 window.location.href = '/admin.html';
                 return;
@@ -160,9 +148,22 @@
                 return;
             }
 
+            // 2. CEK LOGIN DRIVER (Dari tabel app_settings)
+            const { data: driverData } = await supabaseClient.from('app_settings').select('value').eq('id', 'mapel_admin_master_drivers').single();
+            if (driverData && driverData.value) {
+                const drivers = driverData.value;
+                const foundDriver = drivers.find(d => d.username === email && d.password === pass);
+                if (foundDriver) {
+                    localStorage.setItem('mapel_driver_profile', JSON.stringify(foundDriver));
+                    window.location.href = '/driver.html';
+                    return;
+                }
+            }
+
+            // 3. CEK LOGIN CUSTOMER (Supabase Auth)
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
             if (error) {
-                alert("Login Gagal! Cek lagi email/password lu.");
+                alert("Login Gagal! Kredensial tidak ditemukan.");
                 btn.innerText = "Masuk"; btn.disabled = false;
                 return;
             }
@@ -197,7 +198,13 @@
             }
 
             if (data.user) {
-                await supabaseClient.from('profiles').insert([{ id: data.user.id, full_name: nama, whatsapp: wa }]);
+                // Selaras dengan struktur SQL tabel profiles
+                await supabaseClient.from('profiles').insert([{ 
+                    id: data.user.id, 
+                    full_name: nama, 
+                    whatsapp: wa,
+                    role: 'customer'
+                }]);
                 alert("Berhasil! Silakan masuk dengan akun barumu.");
                 toggleForm('login');
             }
