@@ -1,6 +1,5 @@
 /**
  * MAIN APP CONTROLLER - SISI CUSTOMER
- * (Fix Bug Blank Putih & Relative Route Path)
  */
 
 const SUPABASE_URL = 'https://nahgibyegdeioquryfde.supabase.co'; 
@@ -12,7 +11,6 @@ const myMap = new DynamicMap('map', OFFICE.lat, OFFICE.lng, 14);
 
 myMap.map.removeLayer(myMap.driverMarker);
 
-// ROUTE FIX: Pakai ./ di depan path assets
 const officeIcon = L.icon({ 
     iconUrl: './assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45], popupAnchor: [0, -40] 
 });
@@ -52,13 +50,14 @@ if(customerNotifs.length === 0) {
 async function initSupabaseData() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
+        // Ambil data dari tabel profiles yang sesuai dengan schema lu
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
         if (profile) {
             customerProfile = { id: profile.id, name: profile.full_name, email: session.user.email, wa: profile.whatsapp };
             updateProfileUI();
         }
     } else {
-        window.location.href = './index.html'; // ROUTE FIX
+        window.location.href = './index.html'; 
     }
 
     const { data: settings } = await supabase.from('app_settings').select('value').eq('id', 'mapel_ekspedisi').single();
@@ -245,9 +244,8 @@ window.closeAllModals = () => {
 window.handleLogout = async () => {
     if(confirm("Yakin ingin logout dari aplikasi?")) {
         localStorage.removeItem('mapel_customer_notif');
-        localStorage.removeItem('mapel_customer_profile'); 
         await supabase.auth.signOut();
-        window.location.href = './index.html'; // ROUTE FIX
+        window.location.href = './index.html'; 
     }
 };
 
@@ -309,7 +307,6 @@ function renderCustomerNotifs() {
 function getEkspedisiLogo(nama) {
     if (!nama) return null;
     const n = nama.toLowerCase();
-    // ROUTE FIX: Pakai ./ 
     if (n.includes('j&t') || n.includes('jnt')) return './assets/icons/j&t.png';
     if (n.includes('jne')) return './assets/icons/jne.png';
     if (n.includes('ninja')) return './assets/icons/ninja.png';

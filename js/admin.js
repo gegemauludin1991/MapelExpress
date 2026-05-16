@@ -29,24 +29,32 @@ async function initAdminServer() {
             if(s.id === 'mapel_tarif_config') tarifConfig = s.value || tarifConfig;
             if(s.id === 'mapel_promo_list') promoList = s.value || [];
         });
-        renderTableEkspedisi(); renderTableDriverAdmin(); loadTarif(); renderPromo();
+        if(typeof renderTableEkspedisi === 'function') renderTableEkspedisi(); 
+        if(typeof renderTableDriverAdmin === 'function') renderTableDriverAdmin(); 
+        if(typeof loadTarif === 'function') loadTarif(); 
+        if(typeof renderPromo === 'function') renderPromo();
     }
 
     // 2. Tarik Data Transaksi (Orderan)
     const { data: ords } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-    if (ords) { masterOrders = ords.map(o => o.data); renderSemuaOrders(); updateRadarStats(); }
+    if (ords) { 
+        masterOrders = ords.map(o => o.data); 
+        if(typeof renderSemuaOrders === 'function') renderSemuaOrders(); 
+        if(typeof updateRadarStats === 'function') updateRadarStats(); 
+    }
 
     // 3. Tarik Posisi GPS Driver Terakhir
     const { data: drvs } = await supabase.from('driver_locations').select('*');
     if (drvs) { drvs.forEach(d => updateMarkerDriver(d.data)); }
 
-    // 🔥 4. AKTIFKAN RADAR REALTIME (PENGGANTI SOCKET.IO) 🔥
+    // 🔥 4. AKTIFKAN RADAR REALTIME SUPABASE 🔥
     supabase.channel('admin_live_feed')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
             const oData = payload.new.data;
             const idx = masterOrders.findIndex(o => o.id === oData.id);
             if (idx === -1) masterOrders.unshift(oData); else masterOrders[idx] = oData;
-            renderSemuaOrders(); updateRadarStats();
+            if(typeof renderSemuaOrders === 'function') renderSemuaOrders(); 
+            if(typeof updateRadarStats === 'function') updateRadarStats();
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_locations' }, payload => {
             updateMarkerDriver(payload.new.data);
@@ -81,14 +89,15 @@ eksMap.on('click', function(e) {
 function updateMarkerDriver(drvData) {
     if(!drvData || !drvData.lat) return;
     if (!activeDriversOnline[drvData.id]) {
-        const m = L.marker([drvData.lat, drvData.lng], { icon: L.icon({ iconUrl: '/assets/icons/kurir.png', iconSize: [40, 40] }) }).addTo(adminMap).bindPopup(`<b>${drvData.id}</b>`);
+        const m = L.marker([drvData.lat, drvData.lng], { icon: L.icon({ iconUrl: './assets/icons/kurir.png', iconSize: [40, 40] }) }).addTo(adminMap).bindPopup(`<b>${drvData.id}</b>`);
         activeDriversOnline[drvData.id] = { marker: m, data: drvData };
-        renderDriverList();
+        if(typeof renderDriverList === 'function') renderDriverList();
     } else {
         activeDriversOnline[drvData.id].marker.setLatLng([drvData.lat, drvData.lng]);
         activeDriversOnline[drvData.id].data = drvData;
     }
-    document.getElementById('rad-driver').innerText = Object.keys(activeDriversOnline).length;
+    const drvElement = document.getElementById('rad-driver');
+    if(drvElement) drvElement.innerText = Object.keys(activeDriversOnline).length;
 }
 
 // Re-Assign Driver (Supabase Update)
@@ -99,7 +108,9 @@ window.eksekusiReassign = async () => {
     const drv = masterDrivers.find(d => d.id === newDrvId);
     const idx = masterOrders.findIndex(o => o.id === activeDetailOrderId);
     if(idx !== -1 && drv) {
-        masterOrders[idx].driverId = drv.id; masterOrders[idx].driverName = drv.name; masterOrders[idx].status = 'pending'; 
+        masterOrders[idx].driverId = drv.id; 
+        masterOrders[idx].driverName = drv.name; 
+        masterOrders[idx].status = 'pending'; 
         
         // PUSH KE SUPABASE
         await supabase.from('orders').upsert({ id: masterOrders[idx].id, status: 'pending', data: masterOrders[idx] });
@@ -135,10 +146,9 @@ window.simpanAkunDriver = () => {
     if(editIdx === -1) masterDrivers.push(data); else { data.status = masterDrivers[editIdx].status; masterDrivers[editIdx] = data; }
 
     saveAppSetting('mapel_admin_master_drivers', masterDrivers);
-    renderTableDriverAdmin(); tutupModal('modal-form-driver');
+    if(typeof renderTableDriverAdmin === 'function') renderTableDriverAdmin(); 
+    if(typeof tutupModal === 'function') tutupModal('modal-form-driver');
 };
 
-// Start Sistem
+// Start Sistem Admin
 initAdminServer();
-
-// (Sisa Fungsi UI UI Navbar biarkan persis seperti script lu kemaren, jangan dirubah)

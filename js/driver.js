@@ -14,13 +14,17 @@ let notifications = [];
 let isOnline = false;
 
 async function initDriverServer() {
-    if(!driverProfile) return alert("Akses Ditolak! Harap login via halaman utama.");
+    if(!driverProfile) {
+        alert("Akses Ditolak! Harap login via halaman utama.");
+        window.location.href = '/index.html';
+        return;
+    }
 
     // Tarik notif/tugas lama dari DB
     const { data: ords } = await supabase.from('orders').select('*');
     if(ords) {
         notifications = ords.map(o => o.data).filter(o => o.status === 'pending' || o.driverId === driverProfile.id);
-        renderNotifications();
+        if(typeof renderNotifications === 'function') renderNotifications();
     }
 
     // 🔥 SUBSCRIBE REALTIME ORDER 🔥
@@ -31,7 +35,9 @@ async function initDriverServer() {
             if (oData.status === 'pending' || oData.driverId === driverProfile.id) {
                 const idx = notifications.findIndex(n => n.id === oData.id);
                 if(idx === -1) notifications.unshift(oData); else notifications[idx] = oData;
-                renderNotifications();
+                
+                if(typeof renderNotifications === 'function') renderNotifications();
+                
                 if(oData.status === 'pending' && isOnline) {
                     if(window.navigator.vibrate) navigator.vibrate([500, 110, 500]);
                     munculinPopupOrderBaru(oData);
@@ -45,9 +51,16 @@ myMap.map.locate({ watch: true, enableHighAccuracy: true });
 myMap.map.on('locationfound', async (e) => {
     myMap.updateDriverPosition(e.latlng.lat, e.latlng.lng);
     if (isOnline) {
-        driverProfile.lat = e.latlng.lat; driverProfile.lng = e.latlng.lng;
-        // PUSH KE SUPABASE
-        await supabase.from('driver_locations').upsert({ id: driverProfile.id, lat: e.latlng.lat, lng: e.latlng.lng, data: driverProfile, updated_at: new Date().toISOString() });
+        driverProfile.lat = e.latlng.lat; 
+        driverProfile.lng = e.latlng.lng;
+        // PUSH KE SUPABASE SESUAI SCHEMA SQL LU
+        await supabase.from('driver_locations').upsert({ 
+            id: driverProfile.id, 
+            lat: e.latlng.lat, 
+            lng: e.latlng.lng, 
+            data: driverProfile, 
+            updated_at: new Date().toISOString() 
+        });
     }
 });
 
@@ -71,6 +84,8 @@ async function prosesTerimaOrder(orderId) {
     actOrder.status = 'picked_up';
     actOrder.driverId = driverProfile.id;
     actOrder.driverName = driverProfile.name;
+    actOrder.driverNopol = driverProfile.nopol;
+    actOrder.driverWa = driverProfile.wa;
     if(!actOrder.tracking) actOrder.tracking = [];
     actOrder.tracking.push({ time: new Date().toLocaleTimeString(), status: 'Driver Menuju Lokasi Jemput' });
 
@@ -78,7 +93,6 @@ async function prosesTerimaOrder(orderId) {
     await supabase.from('orders').upsert({ id: actOrder.id, status: 'picked_up', data: actOrder });
 
     alert("Tugas diterima! Silakan jemput barang.");
-    // (Lanjut rute jemput mapel spt biasa)
 }
 
 initDriverServer();

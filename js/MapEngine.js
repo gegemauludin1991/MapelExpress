@@ -28,7 +28,7 @@ class DynamicMap {
             rotationOrigin: 'center center' 
         }).addTo(this.map);
         
-        this.driverMarker.bindPopup("<b>🚚 Kurir MapelExpress</b><br>Standby");
+        this.driverMarker.bindPopup("<b>🛵 Kurir MapelExpress</b><br>Standby");
     }
 
     updateDriverPosition(newLat, newLng) {
@@ -78,14 +78,14 @@ class DynamicMap {
             const hexColor = type === 'jemput' ? '#2563EB' : '#DC2626';
             iconHtml = `
             <div style="width: 40px; height: 50px; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.3));">
-                <div style="width: 40px; height: 40px; background-color: ${hexColor}; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; z-index: 10;">📦</div>
+                <div style="width: 40px; height: 40px; background-color: ${hexColor}; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; z-index: 10;">📍</div>
                 <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 12px solid ${hexColor}; margin-top: -2px; z-index: 5;"></div>
             </div>`;
             iconSize = [40, 50];
             iconAnchor = [20, 50]; 
             popupAnchor = [0, -50];
         } else {
-            iconHtml = `<div class="w-8 h-8 bg-white rounded-full flex items-center justify-center border-2 border-gray-400 shadow-md text-sm">🛒</div>`;
+            iconHtml = `<div class="w-8 h-8 bg-white rounded-full flex items-center justify-center border-2 border-gray-400 shadow-md text-sm">📍</div>`;
         }
         
         return L.divIcon({ className: 'custom-div-icon bg-transparent border-0', html: iconHtml, iconSize: iconSize, iconAnchor: iconAnchor, popupAnchor: popupAnchor });
@@ -115,8 +115,6 @@ class DynamicMap {
 
         this.routingControl = L.Routing.control({
             waypoints: routeWaypoints,
-            // FIX FATAL: URL dikembalikan murni ke /route/v1 (Tanpa /driving di akhir)
-            // Biar Leaflet Routing Machine yang otomatis nambahin profile-nya.
             router: L.Routing.osrmv1({ 
                 serviceUrl: 'https://router.project-osrm.org/route/v1',
                 profile: 'driving'
@@ -138,7 +136,6 @@ class DynamicMap {
             if (callbackSummary) callbackSummary(data);
         });
 
-        // Tambahan pendeteksi error, kalo server down lu bakal dapet notif
         this.routingControl.on('routingerror', function(e) {
             console.error('Routing Error:', e);
             alert('Gagal membuat garis jalur dari server peta. Silakan coba lagi atau geser titik jemput/tujuan sedikit.');
