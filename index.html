@@ -15,9 +15,9 @@
         }
         @keyframes zoomOutIcon {
             0% { transform: scale(1.5); opacity: 0; }
-            20% { transform: scale(1); opacity: 1; } 
-            85% { transform: scale(1); opacity: 1; } 
-            100% { transform: scale(0.85); opacity: 0; } 
+            20% { transform: scale(1); opacity: 1; } /* Masuk pelan selama 0.8 detik */
+            85% { transform: scale(1); opacity: 1; } /* Diam lama sekitar 2.6 detik */
+            100% { transform: scale(0.85); opacity: 0; } /* Keluar pelan */
         }
 
         /* Animasi Text Meluncur Kiri -> Kanan - Diperhalus & Diperlambat */
@@ -27,9 +27,9 @@
         }
         @keyframes slideText {
             0% { transform: translateX(-100vw); opacity: 0; }
-            20% { transform: translateX(0); opacity: 1; } 
-            85% { transform: translateX(0); opacity: 1; } 
-            100% { transform: translateX(100vw); opacity: 0; } 
+            20% { transform: translateX(0); opacity: 1; } /* Ngerem mulus di tengah */
+            85% { transform: translateX(0); opacity: 1; } /* Diam lama bareng logo */
+            100% { transform: translateX(100vw); opacity: 0; } /* Meluncur keluar */
         }
 
         /* Animasi Splash Screen Hilang */
@@ -47,7 +47,7 @@
 <body class="relative h-screen w-full flex items-center justify-center">
 
     <div id="splash-screen" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center transition-all overflow-hidden">
-        <img src="/assets/icons/logome.png" alt="Logo MapelExpress" class="w-40 h-40 md:w-48 md:h-48 object-contain animate-zoom-out drop-shadow-xl" onerror="this.src='https://via.placeholder.com/150'">
+        <img src="/assets/icons/logome.png" alt="Logo MapelExpress" class="w-40 h-40 md:w-48 md:h-48 object-contain animate-zoom-out drop-shadow-xl">
         
         <div class="mt-4 w-full flex justify-center">
             <h1 class="font-black text-3xl md:text-4xl tracking-tight animate-slide-text drop-shadow-sm">
@@ -59,26 +59,25 @@
     <main class="w-full max-w-md p-6 relative z-10 hidden" id="auth-container">
         
         <div class="text-center mb-8">
-            <img src="/assets/icons/logome.png" class="h-16 mx-auto mb-3 drop-shadow-sm" onerror="this.src='https://via.placeholder.com/64'">
+            <img src="/assets/icons/logome.png" class="h-16 mx-auto mb-3 drop-shadow-sm">
             <h2 class="text-2xl font-black text-gray-800" id="auth-title">Selamat Datang!</h2>
             <p class="text-sm text-gray-500 font-bold mt-1" id="auth-subtitle">Masuk untuk mulai mengirim paket.</p>
-            <p id="error-msg" class="text-xs font-bold text-red-500 mt-2 hidden"></p>
         </div>
 
         <div id="form-login" class="space-y-5">
             <div>
-                <label class="text-xs font-bold text-gray-500 uppercase">Email Driver / Customer</label>
-                <input type="email" id="login-email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="contoh@email.com">
+                <label class="text-xs font-bold text-gray-500 uppercase">Email / Username</label>
+                <input type="email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="contoh@email.com">
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase flex justify-between">
                     Password
                     <a href="#" class="text-blue-500 hover:text-blue-700">Lupa sandi?</a>
                 </label>
-                <input type="password" id="login-password" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="••••••••">
+                <input type="password" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="••••••••">
             </div>
 
-            <button id="btn-login" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(37,99,235,0.3)] transition-transform active:scale-95 text-lg">
+            <button onclick="window.location.href='/app.html'" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(37,99,235,0.3)] transition-transform active:scale-95 text-lg">
                 Masuk
             </button>
 
@@ -88,7 +87,7 @@
                 <div class="h-px bg-gray-200 flex-1"></div>
             </div>
 
-            <button id="btn-google" class="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3.5 rounded-xl shadow-sm flex items-center justify-center gap-3 transition-colors active:scale-95">
+            <button onclick="alert('Fitur Google Auth akan aktif setelah di-konek ke Supabase bosku!')" class="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3.5 rounded-xl shadow-sm flex items-center justify-center gap-3 transition-colors active:scale-95">
                 <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 15.02 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 Google
             </button>
@@ -101,22 +100,22 @@
         <div id="form-register" class="space-y-4 hidden">
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase">Nama Lengkap</label>
-                <input type="text" id="reg-name" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="Gungun M">
+                <input type="text" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="Gungun M">
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase">Nomor WhatsApp</label>
-                <input type="number" id="reg-wa" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="0812...">
+                <input type="number" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="0812...">
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase">Email</label>
-                <input type="email" id="reg-email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="contoh@email.com">
+                <input type="email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="contoh@email.com">
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase">Buat Password</label>
-                <input type="password" id="reg-password" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="••••••••">
+                <input type="password" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="••••••••">
             </div>
 
-            <button id="btn-register" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(37,99,235,0.3)] transition-transform active:scale-95 text-lg mt-2">
+            <button onclick="alert('Fitur Daftar akan nyala pas Supabase terpasang!')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(37,99,235,0.3)] transition-transform active:scale-95 text-lg mt-2">
                 Buat Akun
             </button>
 
@@ -127,44 +126,27 @@
 
     </main>
 
-    <script type="module">
-        import { supabase, checkSession } from '/js/db.js';
-
-        const splash = document.getElementById('splash-screen');
-        const authContainer = document.getElementById('auth-container');
-        const errorMsg = document.getElementById('error-msg');
-
-        function showError(msg) {
-            errorMsg.innerText = msg;
-            errorMsg.classList.remove('hidden');
-            setTimeout(() => errorMsg.classList.add('hidden'), 5000);
-        }
-
-        // Cek Sesi saat animasi berjalan
-        window.onload = async () => {
-            const authData = await checkSession();
-            
-            // Animasi Splash Tetap Berjalan normal 3.8 Detik
+    <script>
+        // Logic Splash Screen Elegan (Timing Baru)
+        document.addEventListener("DOMContentLoaded", () => {
+            // Tunggu 3.8 detik (sebelum animasi keluar selesai) buat mulai nge-fade out background putih
             setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                const authContainer = document.getElementById('auth-container');
+                
                 splash.classList.add('splash-fade-out');
+                
+                // Setelah setengah detik fade out selesai, baru munculin form login
                 setTimeout(() => {
                     splash.style.display = 'none';
-                    
-                    // Kalau udah login, langsung lempar aja ngga usah nampilin form
-                    if (authData && authData.profile) {
-                        const role = authData.profile.role;
-                        window.location.href = role === 'admin' ? '/admin.html' : (role === 'driver' ? '/driver.html' : '/app.html');
-                    } else {
-                        // Kalau belum login, tampilin form
-                        authContainer.classList.remove('hidden');
-                        authContainer.classList.add('form-slide-in');
-                    }
+                    authContainer.classList.remove('hidden');
+                    authContainer.classList.add('form-slide-in');
                 }, 500); 
-            }, 3800); 
-        };
 
-        // UI Toggle Form (Jadikan Global biar bisa diakses onclick HTML)
-        window.toggleForm = function(target) {
+            }, 3800); 
+        });
+
+        function toggleForm(target) {
             const loginForm = document.getElementById('form-login');
             const registerForm = document.getElementById('form-register');
             const title = document.getElementById('auth-title');
@@ -181,93 +163,7 @@
                 title.innerText = "Selamat Datang!";
                 subtitle.innerText = "Masuk untuk mulai mengirim paket.";
             }
-        };
-
-        // LOGIN EMAIL & PASSWORD
-        document.getElementById('btn-login').addEventListener('click', async () => {
-            const btn = document.getElementById('btn-login');
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-
-            if(!email || !password) return showError("Email & Password wajib diisi!");
-
-            btn.innerText = "Memproses...";
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-            
-            if (error) {
-                showError("Login Gagal: " + error.message);
-                btn.innerText = "Masuk";
-            } else {
-                window.location.reload(); // Biar checkSession yang ambil alih redirect
-            }
-        });
-
-        // LOGIN GOOGLE
-        document.getElementById('btn-google').addEventListener('click', async () => {
-            document.getElementById('btn-google').innerText = "Mohon Tunggu...";
-            const { data, error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: { redirectTo: window.location.origin + '/index.html' }
-            });
-            if (error) showError("Google Auth Gagal: " + error.message);
-        });
-
-        // TANGKAP CALLBACK GOOGLE
-        supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' && session) {
-                // Cek apakah profile udah ada di DB
-                const { data: exist } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-                
-                if (!exist) {
-                    await supabase.from('profiles').insert([{
-                        id: session.user.id,
-                        username: session.user.user_metadata.name || session.user.email,
-                        full_name: session.user.user_metadata.full_name || '',
-                        avatar_url: session.user.user_metadata.avatar_url || '',
-                        role: 'customer' 
-                    }]);
-                    window.location.href = '/app.html';
-                }
-            }
-        });
-
-        // REGISTER CUSTOMER BARU
-        document.getElementById('btn-register').addEventListener('click', async () => {
-            const btn = document.getElementById('btn-register');
-            const name = document.getElementById('reg-name').value;
-            const wa = document.getElementById('reg-wa').value;
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
-
-            if(!name || !wa || !email || !password) return showError("Semua kolom wajib diisi!");
-
-            btn.innerText = "Mendaftarkan...";
-            const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
-
-            if (authError) {
-                showError("Gagal Daftar: " + authError.message);
-                btn.innerText = "Buat Akun";
-                return;
-            }
-
-            // Simpan Profil ke Database
-            if (authData.user) {
-                const { error: profileError } = await supabase.from('profiles').insert([{
-                    id: authData.user.id,
-                    full_name: name,
-                    whatsapp: wa,
-                    role: 'customer'
-                }]);
-                
-                if(profileError) {
-                    showError("Profil gagal disimpan, tapi akun terbuat.");
-                } else {
-                    alert("Akun berhasil dibuat! Silakan masuk.");
-                    window.toggleForm('login');
-                }
-            }
-            btn.innerText = "Buat Akun";
-        });
+        }
     </script>
 </body>
 </html>
