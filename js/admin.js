@@ -65,7 +65,9 @@ window.tutupModal = (id) => {
 // ==========================================
 // 1. DATA MASTER & STATE
 // ==========================================
-const socket = io();
+
+// PENCEGAH CRASH SUPABASE (INI BIANG KEROK KENAPA MAP ADMIN LU BLANK!)
+const socket = window.socketBridge || { on: function(){}, emit: function(){} };
 
 let masterOrders = JSON.parse(localStorage.getItem('mapel_admin_master_orders')) || [];
 let masterDrivers = JSON.parse(localStorage.getItem('mapel_admin_master_drivers')) || [];
@@ -80,15 +82,14 @@ function getWaktu() {
     return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
 }
 
-// FIX NAMA ICON SESUAI REQUEST USER (j&t.png, wahana.png)
 function getEkspedisiLogo(nama) {
     if (!nama) return '/assets/icons/kurir.png';
     const n = nama.toLowerCase();
-    if (n.includes('j&t') || n.includes('jnt')) return '/assets/icons/j&t.png'; // J&T Fix
+    if (n.includes('j&t') || n.includes('jnt')) return '/assets/icons/j&t.png'; 
     if (n.includes('jne')) return '/assets/icons/jne.png';
     if (n.includes('ninja')) return '/assets/icons/ninja.png';
     if (n.includes('spx') || n.includes('shopee')) return '/assets/icons/spx.png';
-    if (n.includes('wahana')) return '/assets/icons/wahana.png'; // Wahana Fix
+    if (n.includes('wahana')) return '/assets/icons/wahana.png'; 
     if (n.includes('sicepat') || n.includes('si cepat')) return '/assets/icons/sicepat.png';
     return '/assets/icons/kurir.png'; 
 }
@@ -115,7 +116,6 @@ let isSheetEksOpen = true;
 window.toggleSheetEks = () => {
     const sheet = document.getElementById('sheet-ekspedisi');
     if(sheet) {
-        // Tepat disisain 70px di bawah layar (Tinggi Title & Garis penarik)
         if(isSheetEksOpen) { sheet.style.transform = 'translateY(calc(100% - 70px))'; } 
         else { sheet.style.transform = 'translateY(0)'; }
         isSheetEksOpen = !isSheetEksOpen;
@@ -210,7 +210,6 @@ window.cariDiRadar = async () => {
     const query = document.getElementById('radar-search').value.trim();
     if(!query) return;
 
-    // Kalo user paste link gmaps
     const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
     const match = query.match(regex);
     if(match) { 
@@ -218,7 +217,6 @@ window.cariDiRadar = async () => {
         return;
     }
 
-    // Kalo user paste Latitude, Longitude manual
     const coordRegex = /^(-?\d+\.\d+)[\s,]+(-?\d+\.\d+)$/;
     const coordMatch = query.match(coordRegex);
     if(coordMatch) {
@@ -226,7 +224,6 @@ window.cariDiRadar = async () => {
         return;
     }
 
-    // Kalo nyari teks alamat, pake Nominatim (OSM API)
     try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
         const data = await res.json();
@@ -240,7 +237,6 @@ window.cariDiRadar = async () => {
 
 socket.on('update_driver_map', (data) => {
     if (!activeDriversOnline[data.id]) {
-        // FIX: Ikon Driver Pake gambar Kurir yang elegan
         const markerKurir = L.marker([data.lat, data.lng], { 
             icon: L.icon({ iconUrl: '/assets/icons/kurir.png', iconSize: [40, 40], iconAnchor: [20, 20] }),
             zIndexOffset: 1000
@@ -484,7 +480,6 @@ window.simpanEkspedisi = function() {
     renderTableEkspedisi();
     eksMap.setView([lat, lng], 16);
     
-    // Tutup pelan-pelan sheetnya
     const sheet = document.getElementById('sheet-ekspedisi');
     if(sheet) { sheet.style.transform = 'translateY(calc(100% - 70px))'; isSheetEksOpen = false; }
 };

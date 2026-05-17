@@ -19,7 +19,8 @@ L.marker([OFFICE.lat, OFFICE.lng], { icon: officeIcon }).addTo(myMap.map).bindPo
     </div>
 `);
 
-const socket = io();
+// PENCEGAH CRASH SUPABASE (Pengganti Socket Lokal)
+const socket = window.socketBridge || { on: function(){}, emit: function(){} };
 
 function getWaktuSekarang() {
     const now = new Date();
@@ -418,7 +419,6 @@ myMap.map.on('moveend', function() {
     }
 });
 
-// FIX BUG ALAMAT NGACO: Cuma ini yang gue benerin di fungsi ini biar map ga blank!
 document.getElementById('btn-set-lokasi').onclick = async () => {
     const btn = document.getElementById('btn-set-lokasi');
     const originalText = btn.innerText;
@@ -428,7 +428,6 @@ document.getElementById('btn-set-lokasi').onclick = async () => {
     const center = myMap.map.getCenter();
     let alamat = document.getElementById('set-lokasi-title').innerText;
     
-    // Gembok Anti Ngaco: Pastiin bukan text loading
     if (alamat === "Geser peta untuk menentukan titik" || alamat === "Mencari lokasi...") {
         alamat = await getAddressFromCoords(center.lat, center.lng);
     }
