@@ -50,7 +50,6 @@ if(customerNotifs.length === 0) {
 async function initSupabaseData() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
-        // Ambil data dari tabel profiles yang sesuai dengan schema lu
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
         if (profile) {
             customerProfile = { id: profile.id, name: profile.full_name, email: session.user.email, wa: profile.whatsapp };
@@ -365,6 +364,14 @@ if(btnMyLocation) {
     };
 }
 
+window.cariEkspedisiCepat = (brandName) => {
+    currentJenisLayanan = 'ekspedisi';
+    if (!window.ekspedisiList || window.ekspedisiList.length === 0) return alert("Belum ada ekspedisi!");
+    const target = window.ekspedisiList.find(e => e.name.toUpperCase().includes(brandName.toUpperCase()));
+    if (target) window.buatRuteKeTujuan(target.lat, target.lng, target.name);
+    else alert(`Gerai ${brandName} tidak ditemukan.`);
+};
+
 function renderPinEkspedisi() {
     if (typeof window.ekspedisiList === 'undefined' || window.ekspedisiList.length === 0) return;
     window.ekspedisiList.forEach(eks => {
@@ -444,7 +451,8 @@ window.buatRuteKeTujuan = (targetLat, targetLng, namaTujuan) => {
         const btnPesan = document.getElementById('btn-pesan-kurir');
         if(btnPesan) {
             btnPesan.disabled = false;
-            btnPesan.className = "w-full bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2 cursor-pointer pointer-events-auto";
+            // Gunakan style asli lu yang ada SVG-nya
+            btnPesan.className = "bg-blue-600 text-white font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center gap-2 pointer-events-auto shadow-md active:scale-95";
         }
     });
     
@@ -489,7 +497,7 @@ function enterPickingMode(btnText, color) {
     if(targetDestMarker && pickingMode === 'tujuan') myMap.map.removeLayer(targetDestMarker);
 
     const dotLoc = document.getElementById('set-lokasi-dot');
-    if(dotLoc) dotLoc.className = `absolute -top-1 -right-1 w-3 h-3 rounded-full bg-${color}-500 shadow-lg border-2 border-white animate-pulse`;
+    if(dotLoc) dotLoc.className = `w-2.5 h-2.5 bg-${color}-500 rounded-full animate-pulse`;
     
     const overlay = document.getElementById('center-pin-overlay');
     const cardLoc = document.getElementById('set-lokasi-card');
@@ -575,8 +583,8 @@ window.exitPickingMode = function() {
     if(overlay) overlay.classList.add('hidden');
     setTimeout(() => { 
         if(cardLoc) cardLoc.classList.add('hidden'); 
-        if(bs) bs.style.transform = 'translateY(calc(100% - 35px))'; 
-        isSheetOpen = false; 
+        if(bs) bs.style.transform = 'translateY(0)'; 
+        isSheetOpen = true; 
     }, 300);
 }
 
@@ -588,6 +596,9 @@ if(btnPesanKurir) {
         
         const fnNama = document.getElementById('form-nama');
         const fnBerat = document.getElementById('form-berat');
+        // FIX: Tangkap data field baru lu
+        const fnDimensi = document.getElementById('form-dimensi');
+        const fnKet = document.getElementById('form-keterangan');
         
         const orderData = {
             id: "ORD-" + Math.floor(Math.random() * 90000),
@@ -595,6 +606,8 @@ if(btnPesanKurir) {
             jenisLayanan: currentJenisLayanan,
             namaBarang: fnNama ? fnNama.value : "Paket",
             berat: fnBerat ? fnBerat.value : 1,
+            dimensi: fnDimensi ? fnDimensi.value : "",
+            keterangan: fnKet ? fnKet.value : "",
             alamatJemput: document.getElementById('input-jemput').value,
             jemputLat: pickupMarker.getLatLng().lat, jemputLng: pickupMarker.getLatLng().lng,
             alamatTujuan: document.getElementById('input-tujuan').value,
@@ -613,8 +626,8 @@ if(btnPesanKurir) {
 
         if(error) {
             alert("Gagal mengirim pesanan: " + error.message);
-            btn.innerHTML = `Pesan Kurir Sekarang <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>`;
-            btn.className = "w-full bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2 cursor-pointer pointer-events-auto";
+            btn.innerHTML = `Pesan Kurir <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>`;
+            btn.className = "bg-blue-600 text-white font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center gap-2 pointer-events-auto shadow-md active:scale-95";
         }
     };
 }
