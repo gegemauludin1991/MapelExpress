@@ -1,124 +1,73 @@
-// ========================================================================
-// FILE: js/db.js (ENGINE DATABASE SUPABASE & AUTH)
-// VERSI FINAL: Anti-Freeze & Auto-Bypass Socket.io
-// ========================================================================
+/**
+ * DATABASE & SECURITY CONTROLLER
+ * Menghubungkan Supabase dan Mengamankan Halaman
+ */
 
-const SUPABASE_URL = 'https://nahgibyegdeioquryfde.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
+// MASUKKAN URL & ANON KEY SUPABASE LU DI SINI
+const SUPABASE_URL = 'https://XXXXXXXXXXXXX.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; 
 
-// 1. Inisiasi Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Inisialisasi Supabase
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let userProfile = null;
-let isReady = false; 
-const path = window.location.pathname;
-
-// 2. Deteksi Role (Satpam Halaman)
-let requiredRole = null;
-if (path.includes('admin.html')) requiredRole = 'admin';
-else if (path.includes('driver.html')) requiredRole = 'driver';
-else if (path.includes('app.html')) requiredRole = 'customer';
-
-// 3. JEMBATAN GAIB (Menggantikan fungsi io() dari Socket.io)
-// Ini yang bikin app.js, driver.js, dan admin.js lu gak bakal crash/freeze!
-window.socketBridge = {
-    events: {},
-    on: function(eventName, callback) {
-        this.events[eventName] = callback;
-    },
-    emit: async function(eventName, data) {
-        if (!isReady || !userProfile) return; 
-        try {
-            if (eventName === 'updateLocation') {
-                await supabase.from('driver_locations').upsert([{
-                    id: userProfile.id, lat: data.lat, lng: data.lng,
-                    data: { name: userProfile.full_name, nopol: userProfile.whatsapp },
-                    updated_at: new Date()
-                }]);
-            } else if (eventName === 'newOrder') {
-                const orderId = 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-                data.customer_id = userProfile.id;
-                data.customer_name = userProfile.full_name;
-                data.customer_wa = userProfile.whatsapp;
-                await supabase.from('orders').insert([{ id: orderId, status: 'pending', data: data }]);
-            } else if (eventName === 'updateOrderStatus' || eventName === 'updateOrder') {
-                const targetId = data.orderId || data.id;
-                await supabase.from('orders').update({ status: data.status }).eq('id', targetId);
+// ==========================================
+// 1. FITUR LOGIN GOOGLE AUTH
+// ==========================================
+window.loginDenganGoogle = async function() {
+    try {
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                // Habis login berhasil, langsung tendang ke halaman Customer
+                redirectTo: window.location.origin + '/app.html' 
             }
-        } catch(err) {
-            console.error("[Bridge Error]:", err);
-        }
+        });
+        if (error) alert("Gagal Login: " + error.message);
+    } catch (err) {
+        console.error("Error Google Auth:", err);
     }
 };
 
-// MANIPULASI FUNGSI GLOBAL io() AGAR FILE JS LAMA TIDAK ERROR
-window.io = function() {
-    console.log("[Sistem] Mengaktifkan Jembatan Supabase...");
-    return window.socketBridge;
-};
-
-// 4. SISTEM PROTEKSI & LOGIN
-async function checkAuth() {
+// ==========================================
+// 2. SISTEM SATPAM (ROLE-BASED ACCESS CONTROL)
+// ==========================================
+async function proteksiHalaman() {
+    const path = window.location.pathname;
     const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session && requiredRole) {
+
+    // Skenario A: Belum Login tapi maksa masuk halaman dalam -> Tendang ke index.html
+    if (!session && path !== '/' && !path.includes('index.html')) {
         window.location.replace('/index.html');
         return;
     }
 
+    // Skenario B: Sudah Login
     if (session) {
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        if (profile) {
-            userProfile = profile;
-            
-            if (requiredRole && profile.role !== requiredRole) {
-                if (profile.role === 'admin') window.location.replace('/admin.html');
-                else if (profile.role === 'driver') window.location.replace('/driver.html');
-                else window.location.replace('/app.html');
-                return;
-            }
-            
-            isReady = true; 
-            if (requiredRole) initRealtimeBridge();
-        } else {
-            await supabase.auth.signOut();
-            window.location.replace('/index.html');
+        // Ambil role (Kalo login dari Google, defaultnya kita anggap 'customer')
+        const role = session.user.user_metadata?.role || 'customer';
+
+        // Cegah penyusup masuk ke halaman Admin
+        if (path.includes('admin.html') && role !== 'admin') {
+            alert('Akses Ditolak! Ini Halaman Khusus Admin.');
+            window.location.replace('/app.html');
+            return;
+        }
+        
+        // Cegah penyusup masuk ke halaman Driver
+        if (path.includes('driver.html') && role !== 'driver') {
+            alert('Akses Ditolak! Ini Halaman Khusus Driver.');
+            window.location.replace('/app.html');
+            return;
+        }
+
+        // Kalo udah login tapi iseng buka ulang halaman index/login -> Arahin ke dashboard masing-masing
+        if (path === '/' || path.includes('index.html')) {
+            if (role === 'admin') window.location.replace('/admin.html');
+            else if (role === 'driver') window.location.replace('/driver.html');
+            else window.location.replace('/app.html');
         }
     }
 }
-checkAuth();
 
-window.handleLogout = async () => {
-    if(confirm("Yakin ingin keluar?")) {
-        await supabase.auth.signOut();
-        window.location.replace('/index.html');
-    }
-};
-
-// 5. RECEIVER SUPABASE (Tangkap Pergerakan GPS & Orderan)
-function initRealtimeBridge() {
-    if (requiredRole === 'customer' || requiredRole === 'admin') {
-        supabase.channel('public:driver_locations')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'driver_locations' }, payload => {
-                const loc = payload.new;
-                if (window.socketBridge.events['driverMoved']) {
-                    window.socketBridge.events['driverMoved']({ id: loc.id, lat: loc.lat, lng: loc.lng, ...loc.data });
-                }
-            }).subscribe();
-    }
-
-    supabase.channel('public:orders')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
-            if (requiredRole === 'driver' && window.socketBridge.events['incomingOrder']) {
-                window.socketBridge.events['incomingOrder'](payload.new);
-            }
-        })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
-            const updatedOrder = payload.new;
-            if (requiredRole === 'customer' && updatedOrder.data.customer_id === userProfile.id) {
-                if (window.socketBridge.events['orderUpdated']) {
-                    window.socketBridge.events['orderUpdated'](updatedOrder);
-                }
-            }
-        }).subscribe();
-}
+// Langsung jalankan satpamnya sesaat setelah file JS ini dipanggil oleh browser
+proteksiHalaman();
