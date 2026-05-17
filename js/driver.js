@@ -1,6 +1,6 @@
 /**
  * MAIN APP CONTROLLER - SISI KURIR / DRIVER
- * (Fix: Menampilkan Pin Ekspedisi dari DB Admin ke Map Driver)
+ * (Fix Bug Navbar/Tab Switcher Crash & Pin Ekspedisi Admin)
  */
 
 const OFFICE = { lat: -6.977414, lng: 107.555359 };
@@ -12,7 +12,8 @@ const officeIcon = L.icon({
 L.marker([OFFICE.lat, OFFICE.lng], { icon: officeIcon }).addTo(myMap.map)
     .bindPopup("<div class='font-bold text-center text-blue-800 text-xs'>Pusat Operasional<br>MapelExpress</div>");
 
-const socket = io();
+// PENCEGAH CRASH SUPABASE (Pengganti Socket Lokal)
+const socket = window.socketBridge || { on: function(){}, emit: function(){} };
 
 function getWaktuSekarang() {
     const now = new Date();
@@ -27,20 +28,18 @@ let driverProfile = JSON.parse(localStorage.getItem('mapel_driver_profile')) || 
 };
 let notifications = JSON.parse(localStorage.getItem('mapel_driver_notif')) || [];
 
-// FIX ICON J&T & Wahana
 function getEkspedisiLogo(nama) {
     if (!nama) return '/assets/icons/kurir.png';
     const n = nama.toLowerCase();
-    if (n.includes('j&t') || n.includes('jnt')) return '/assets/icons/j&t.png'; // Fix J&T
+    if (n.includes('j&t') || n.includes('jnt')) return '/assets/icons/j&t.png'; 
     if (n.includes('jne')) return '/assets/icons/jne.png';
     if (n.includes('ninja')) return '/assets/icons/ninja.png';
     if (n.includes('spx') || n.includes('shopee')) return '/assets/icons/spx.png';
-    if (n.includes('wahana')) return '/assets/icons/wahana.png'; // Fix Wahana
+    if (n.includes('wahana')) return '/assets/icons/wahana.png'; 
     if (n.includes('sicepat') || n.includes('si cepat')) return '/assets/icons/sicepat.png';
     return '/assets/icons/kurir.png'; 
 }
 
-// FIX: Tarik data titik ekspedisi buatan admin ke map Driver
 let adminEkspedisiList = JSON.parse(localStorage.getItem('mapel_ekspedisi')) || [];
 function renderPinEkspedisiDiDriver() {
     adminEkspedisiList.forEach(eks => {
@@ -270,24 +269,35 @@ if(navNotif) {
     });
 }
 
-const tabs = { dashboard: document.getElementById('view-dashboard'), map: document.getElementById('view-map'), notif: document.getElementById('view-notif'), settings: document.getElementById('view-settings') };
-const navBtns = { dashboard: document.getElementById('nav-dashboard'), map: document.getElementById('nav-map'), notif: document.getElementById('nav-notif'), settings: document.getElementById('nav-settings') };
+// ==========================================
+// FIX BUG NAVBAR & TABS: DI-BUNGKUS DALAM DOMCONTENTLOADED
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = { dashboard: document.getElementById('view-dashboard'), map: document.getElementById('view-map'), notif: document.getElementById('view-notif'), settings: document.getElementById('view-settings') };
+    const navBtns = { dashboard: document.getElementById('nav-dashboard'), map: document.getElementById('nav-map'), notif: document.getElementById('nav-notif'), settings: document.getElementById('nav-settings') };
 
-function switchTab(target) {
-    Object.keys(tabs).forEach(k => { 
-        if(tabs[k]) tabs[k].classList.add('hidden', 'opacity-0'); 
-        if(navBtns[k]) { navBtns[k].classList.remove('text-blue-600'); navBtns[k].classList.add('text-gray-400'); }
-    });
-    if(tabs[target]) { tabs[target].classList.remove('hidden'); setTimeout(() => tabs[target].classList.remove('opacity-0'), 50); }
-    if(navBtns[target]) { navBtns[target].classList.remove('text-gray-400'); navBtns[target].classList.add('text-blue-600'); }
-    if (target === 'map') setTimeout(() => myMap.map.invalidateSize(), 300);
-    if (target === 'notif') renderNotifications();
-}
+    window.switchTab = function(target) {
+        Object.keys(tabs).forEach(k => { 
+            if(tabs[k]) tabs[k].classList.add('hidden', 'opacity-0'); 
+            if(navBtns[k]) { navBtns[k].classList.remove('text-blue-600'); navBtns[k].classList.add('text-gray-400'); }
+        });
+        if(tabs[target]) { tabs[target].classList.remove('hidden'); setTimeout(() => tabs[target].classList.remove('opacity-0'), 50); }
+        if(navBtns[target]) { navBtns[target].classList.remove('text-gray-400'); navBtns[target].classList.add('text-blue-600'); }
+        if (target === 'map') setTimeout(() => myMap.map.invalidateSize(), 300);
+        if (target === 'notif') renderNotifications();
+    };
 
-if(navBtns.dashboard) navBtns.dashboard.onclick = () => switchTab('dashboard');
-if(navBtns.map) navBtns.map.onclick = () => switchTab('map');
-if(navBtns.notif) navBtns.notif.onclick = () => switchTab('notif');
-if(navBtns.settings) navBtns.settings.onclick = () => switchTab('settings');
+    if(navBtns.dashboard) navBtns.dashboard.onclick = () => window.switchTab('dashboard');
+    if(navBtns.map) navBtns.map.onclick = () => window.switchTab('map');
+    if(navBtns.notif) navBtns.notif.onclick = () => window.switchTab('notif');
+    if(navBtns.settings) navBtns.settings.onclick = () => window.switchTab('settings');
+    
+    // Inisialisasi awal saat web driver dibuka
+    renderDashboard(); 
+    renderNotifications();
+    renderPinEkspedisiDiDriver();
+});
+// ==========================================
 
 const toggleStatus = document.getElementById('toggle-status');
 const statusText = document.getElementById('status-text');
@@ -355,7 +365,7 @@ socket.on('new_order_broadcast', (orderData) => {
     const dot = document.getElementById('notif-dot');
     if(dot) dot.classList.remove('hidden');
     
-    if(tabs.notif && !tabs.notif.classList.contains('hidden')) renderNotifications();
+    if(document.getElementById('view-notif') && !document.getElementById('view-notif').classList.contains('hidden')) renderNotifications();
 
     if (!activeOrder && isOnline) {
         const btnTutup = document.getElementById('btn-tolak');
@@ -420,7 +430,9 @@ function prosesTerimaOrder(orderId) {
         if(tugasAlamat) tugasAlamat.innerText = activeOrder.alamatJemput;
         if(sheetTugas) sheetTugas.classList.remove('translate-y-[120%]');
     });
-    switchTab('map');
+    
+    // Ganti window.switchTab yang sekarang global
+    window.switchTab('map');
 }
 
 let isSheetTugasOpen = true;
@@ -617,9 +629,3 @@ if(btnTugasAct) {
         }
     };
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    renderDashboard(); 
-    renderNotifications();
-    renderPinEkspedisiDiDriver(); // INIT RENDER TITIK EKS
-});

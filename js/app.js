@@ -1,6 +1,6 @@
 /**
  * MAIN APP CONTROLLER - SISI CUSTOMER
- * (Fix Bug Teks Alamat Jemput Ngaco - Stabil Tanpa Merusak Map)
+ * (Terkoneksi dengan Supabase Auth & Fitur Logout yang Sempurna)
  */
 
 const OFFICE = { lat: -6.977414, lng: 107.555359, wa: "6281234567890", alamat: "Jl. Raya Margaasih, Kab. Bandung" };
@@ -37,9 +37,6 @@ let isOrderActive = false;
 let currentJenisLayanan = 'personal'; 
 
 let customerNotifs = JSON.parse(localStorage.getItem('mapel_customer_notif')) || [];
-let customerProfile = JSON.parse(localStorage.getItem('mapel_customer_profile')) || {
-    name: "Gungun M", email: "gungun@example.com", wa: "081234567890"
-};
 
 if(customerNotifs.length === 0) {
     customerNotifs.push({
@@ -94,16 +91,26 @@ socket.on('update_driver_map', (data) => {
     }
 });
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     window.ekspedisiList = JSON.parse(localStorage.getItem('mapel_ekspedisi')) || [];
     renderPinEkspedisi();
 
-    document.getElementById('profile-name-text').innerText = customerProfile.name;
-    document.getElementById('profile-email-text').innerText = customerProfile.email;
-    document.getElementById('profile-wa-text').innerText = customerProfile.wa;
+    // SINKRONISASI DATA PROFIL DARI SUPABASE GOOGLE AUTH
+    if (typeof supabase !== 'undefined') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            // Ambil Nama Panjang (Jika tidak ada, ambil dari potongan email depan)
+            const fullName = user.user_metadata?.full_name || user.email.split('@')[0];
+            
+            document.getElementById('profile-name-text').innerText = fullName;
+            document.getElementById('profile-email-text').innerText = user.email;
+            document.getElementById('profile-wa-text').innerText = "Google Account";
 
-    const namaDepan = customerProfile.name.split(' ')[0];
-    document.getElementById('header-greeting').innerText = `Hai, ${namaDepan}! 👋`;
+            // Sapaan Ambil Kata Pertama Dari Nama Lengkap
+            const namaPanggilan = fullName.split(' ')[0];
+            document.getElementById('header-greeting').innerText = `Hai, ${namaPanggilan}! 👋`;
+        }
+    }
 
     const btnNotif = document.getElementById('btn-notif-customer');
     const btnProfile = document.getElementById('btn-profile');
@@ -138,11 +145,15 @@ window.closeAllModals = () => {
     }, 300);
 };
 
-window.handleLogout = () => {
+// FUNGSI LOGOUT YANG BENAR (MENGHAPUS SESI SUPABASE)
+window.handleLogout = async () => {
     if(confirm("Yakin ingin logout dari aplikasi?")) {
-        localStorage.removeItem('mapel_customer_notif');
-        localStorage.removeItem('mapel_customer_profile'); 
-        alert("Logout Berhasil!"); location.reload();
+        if (typeof supabase !== 'undefined') {
+            await supabase.auth.signOut(); // Hancurkan sesi di Supabase
+        }
+        localStorage.clear(); // Hapus cache lokal
+        alert("Logout Berhasil!"); 
+        window.location.replace('/index.html'); // Lempar balik ke login page
     }
 };
 
