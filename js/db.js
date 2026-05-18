@@ -1,40 +1,52 @@
-/**
- * DATABASE & SECURITY CONTROLLER
- */
+// ========================================================================
+// FILE: js/db.js (ENGINE DATABASE SUPABASE & AUTH SECURITY)
+// VERSI: FULL HARDCODED CREDENTIALS - ANTI BYPASS SECURITY & ANTI BENTROK ROLE
+// ========================================================================
 
-// MASUKKAN URL & ANON KEY SUPABASE LU DI SINI
-const SUPABASE_URL = 'https://XXXXXXXXXXXXX.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; 
+const SUPABASE_URL = 'https://nahgibyegdeioquryfde.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
 
+// Inisialisasi client Supabase secara global
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ==========================================
-// 1. FITUR LOGIN GOOGLE AUTH
-// ==========================================
+let userProfile = null;
+let isReady = false;
+const path = window.location.pathname;
+
+// Deteksi target halaman berdasarkan URL aktif
+let requiredRole = null;
+if (path.includes('admin.html')) requiredRole = 'admin';
+else if (path.includes('driver.html')) requiredRole = 'driver';
+else if (path.includes('app.html')) requiredRole = 'customer';
+
+// =====================================================================
+// A. LAYANAN AUTENTIKASI (GOOGLE & MANUAL LOGIN)
+// =====================================================================
+
+// 1. Login Dengan Google
 window.loginDenganGoogle = async function() {
     try {
+        console.log("[Supabase] Memicu Google OAuth...");
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: { redirectTo: window.location.origin + '/app.html' }
         });
-        if (error) alert("Gagal Login Google: " + error.message);
-    } catch (err) { console.error("Error:", err); }
+        if (error) alert("Gagal OAuth Google: " + error.message);
+    } catch (err) { console.error("OAuth Error:", err); }
 };
 
-// ==========================================
-// 2. FITUR LOGIN & DAFTAR MANUAL (EMAIL & PASS)
-// ==========================================
+// 2. Registrasi Akun Manual (Customer)
 window.registerManual = async function() {
     const name = document.getElementById('reg-name').value;
     const wa = document.getElementById('reg-wa').value;
     const email = document.getElementById('reg-email').value;
     const password = document.getElementById('reg-password').value;
 
-    if (!name || !email || !password) return alert("Nama, Email, dan Password wajib diisi!");
+    if (!name || !email || !password) return alert("Nama, Email, dan Password wajib diisi bos!");
 
-    document.getElementById('btn-register').innerText = "Memproses...";
-    
-    // Daftar ke Supabase Auth (Otomatis ditangkap oleh Trigger SQL ke tabel profiles)
+    const btn = document.getElementById('btn-register');
+    btn.innerText = "Mendaftarkan...";
+
     const { data, error } = await supabase.auth.signUp({
         email: email,
         password: password,
@@ -43,79 +55,145 @@ window.registerManual = async function() {
 
     if (error) {
         alert("Gagal Daftar: " + error.message);
-        document.getElementById('btn-register').innerText = "Buat Akun";
     } else {
-        alert("Pendaftaran Berhasil! Silakan Login.");
+        alert("Pendaftaran Berhasil! Silakan masuk menggunakan email terdaftar.");
         window.toggleForm('login');
-        document.getElementById('btn-register').innerText = "Buat Akun";
     }
+    btn.innerText = "Buat Akun";
 };
 
+// 3. Login Manual (Email & Password - Untuk Customer & Akun Driver Buatan Admin)
 window.loginManual = async function() {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
 
-    if (!email || !password) return alert("Isi email dan password lu bro!");
-    
-    document.getElementById('btn-login').innerText = "Memeriksa...";
+    if (!email || !password) return alert("Email dan Password wajib diisi!");
+
+    const btn = document.getElementById('btn-login');
+    btn.innerText = "Memeriksa...";
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-        alert("Gagal Login: " + error.message);
-        document.getElementById('btn-login').innerText = "Masuk";
+        alert("Login Gagal: Periksa kembali email & password anda.");
+        btn.innerText = "Masuk";
     } else {
-        // Biarkan proteksiHalaman() yang mengatur arah (routing) halamannya
-        window.location.reload(); 
+        // Refresh halaman, biarkan fungsi proteksiHalaman() yang membaca role dan melakukan redirect
+        window.location.reload();
     }
 };
 
-// ==========================================
-// 3. SISTEM SATPAM (ROLE-BASED ACCESS CONTROL)
-// ==========================================
+// =====================================================================
+// B. SATPAM SISTEM (ANTI BYPASS LINK BELAKANG & ANTI LOGOUT MACET)
+// =====================================================================
 async function proteksiHalaman() {
-    const path = window.location.pathname;
-    const { data: { session } } = await supabase.auth.getSession();
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const isAuthPage = path === '/' || path.includes('index.html');
 
-    // SKENARIO A: Belum Login -> Tendang ke Halaman Login (index.html)
-    if (!session && path !== '/' && !path.includes('index.html')) {
-        window.location.replace('/index.html');
-        return;
-    }
-
-    // SKENARIO B: Sudah Login
-    if (session) {
-        // Ambil role ASLI dari tabel profiles
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
-
-        const role = profile?.role || 'customer'; // Default aman
-
-        // CEGAT PENYUSUP KE HALAMAN ADMIN
-        if (path.includes('admin.html') && role !== 'admin') {
-            alert('Akses Ditolak! Lu bukan Admin bos.');
-            window.location.replace('/app.html');
-            return;
-        }
-        
-        // CEGAT PENYUSUP KE HALAMAN DRIVER
-        if (path.includes('driver.html') && role !== 'driver') {
-            alert('Akses Ditolak! Lu bukan Kurir.');
-            window.location.replace('/app.html');
+        // Skenario 1: Mencoba akses halaman dalam tanpa login -> Blokir dan tendang ke depan
+        if (!session) {
+            if (!isAuthPage) {
+                window.location.replace('/index.html');
+            }
             return;
         }
 
-        // Kalo udah login tapi iseng buka halaman index/login, arahin ke rumah masing-masing
-        if (path === '/' || path.includes('index.html')) {
-            if (role === 'admin') window.location.replace('/admin.html');
-            else if (role === 'driver') window.location.replace('/driver.html');
-            else window.location.replace('/app.html');
+        // Skenario 2: Jika user terdeteksi sudah login, cek role dari tabel profiles
+        if (session) {
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+            const role = profile?.role || 'customer'; // Default fallback aman
+            userProfile = profile;
+            isReady = true;
+
+            // VALIDASI ANTI BYPASS: Jika role tidak sesuai dengan halaman yang dibuka, tendang paksa!
+            if (requiredRole && role !== requiredRole) {
+                alert(`Akses Ditolak! Akun anda terdaftar sebagai ${role.toUpperCase()}.`);
+                if (role === 'admin') window.location.replace('/admin.html');
+                else if (role === 'driver') window.location.replace('/driver.html');
+                else window.location.replace('/app.html');
+                return;
+            }
+
+            // Jika user nekat buka halaman login padahal statusnya sudah login, langsung arahkan ke jalurnya
+            if (isAuthPage) {
+                if (role === 'admin') window.location.replace('/admin.html');
+                else if (role === 'driver') window.location.replace('/driver.html');
+                else window.location.replace('/app.html');
+            }
+
+            // Jika semua lolos, aktifkan jembatan realtime data mapel
+            if (requiredRole) initRealtimeBridge();
         }
+    } catch (err) {
+        console.error("Security Engine Crash: ", err);
     }
 }
-
-// Jalankan sekuriti
 proteksiHalaman();
+
+// Fungsi Logout Total Bersihkan Semua Sesi Server & Browser
+window.handleLogout = async () => {
+    if(confirm("Yakin ingin keluar dari aplikasi?")) {
+        await supabase.auth.signOut();
+        localStorage.clear();
+        window.location.replace('/index.html');
+    }
+};
+
+// =====================================================================
+// C. MOCK SOCKET.IO INTERFACES (JEMBATAN GAIB UNTUK APP.JS & DRIVER.JS)
+// =====================================================================
+window.socketBridge = {
+    events: {},
+    on: function(eventName, callback) { this.events[eventName] = callback; },
+    emit: async function(eventName, data) {
+        if (!isReady || !userProfile) return;
+        try {
+            if (eventName === 'driver_send_location' || eventName === 'updateLocation') {
+                await supabase.from('driver_locations').upsert([{
+                    id: userProfile.id, lat: data.lat, lng: data.lng,
+                    data: { name: userProfile.full_name, nopol: userProfile.whatsapp },
+                    updated_at: new Date()
+                }]);
+            }
+            else if (eventName === 'customer_create_order' || eventName === 'newOrder') {
+                const orderId = data.id || 'ORD-' + Math.random().toString(36).substr(2, 7).toUpperCase();
+                await supabase.from('orders').insert([{ id: orderId, status: 'pending', data: data }]);
+            }
+            else if (eventName === 'driver_accept_order' || eventName === 'update_order_status') {
+                await supabase.from('orders').update({ status: data.status }).eq('id', data.orderId);
+            }
+        } catch(err) { console.error("[Bridge Send Error]:", err); }
+    }
+};
+
+window.io = function() { return window.socketBridge; };
+
+function initRealtimeBridge() {
+    if (requiredRole === 'customer' || requiredRole === 'admin') {
+        supabase.channel('public:driver_locations')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'driver_locations' }, payload => {
+                const loc = payload.new;
+                if (window.socketBridge.events['update_driver_map']) {
+                    window.socketBridge.events['update_driver_map']({ id: loc.id, lat: loc.lat, lng: loc.lng });
+                }
+            }).subscribe();
+    }
+
+    supabase.channel('public:orders')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
+            if (requiredRole === 'driver' && window.socketBridge.events['new_order_broadcast']) {
+                window.socketBridge.events['new_order_broadcast'](payload.new.data);
+            }
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
+            if (requiredRole === 'customer' && window.socketBridge.events['order_status_changed']) {
+                window.socketBridge.events['order_status_changed'](payload.new);
+            }
+        }).subscribe();
+}
