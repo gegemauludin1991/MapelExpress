@@ -9,10 +9,7 @@
     <style>
         body { font-family: 'Nunito', sans-serif; background-color: #F8FAFC; overflow: hidden; }
         
-        /* Animasi Icon Zoom Out - Diperhalus & Diperlambat */
-        .animate-zoom-out {
-            animation: zoomOutIcon 4s cubic-bezier(0.25, 1, 0.3, 1) forwards;
-        }
+        .animate-zoom-out { animation: zoomOutIcon 4s cubic-bezier(0.25, 1, 0.3, 1) forwards; }
         @keyframes zoomOutIcon {
             0% { transform: scale(1.5); opacity: 0; }
             20% { transform: scale(1); opacity: 1; }
@@ -20,11 +17,7 @@
             100% { transform: scale(0.85); opacity: 0; }
         }
 
-        /* Animasi Text Meluncur Kiri -> Kanan - Diperhalus & Diperlambat */
-        .animate-slide-text {
-            animation: slideText 4s cubic-bezier(0.25, 1, 0.3, 1) forwards;
-            display: inline-block;
-        }
+        .animate-slide-text { animation: slideText 4s cubic-bezier(0.25, 1, 0.3, 1) forwards; display: inline-block; }
         @keyframes slideText {
             0% { transform: translateX(-100vw); opacity: 0; }
             20% { transform: translateX(0); opacity: 1; }
@@ -32,23 +25,17 @@
             100% { transform: translateX(100vw); opacity: 0; }
         }
 
-        /* Animasi Splash Screen Hilang */
         .splash-fade-out { animation: fadeOut 0.5s forwards; pointer-events: none; }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
         
-        /* Animasi Form Slide */
         .form-slide-in { animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .form-slide-out { animation: slideOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; display: none; }
-        @keyframes slideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(-20px); } }
     </style>
 </head>
 <body class="relative h-screen w-full flex items-center justify-center">
 
     <div id="splash-screen" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center transition-all overflow-hidden">
         <img src="/assets/icons/logome.png" alt="Logo MapelExpress" class="w-40 h-40 md:w-48 md:h-48 object-contain animate-zoom-out drop-shadow-xl">
-        
         <div class="mt-4 w-full flex justify-center">
             <h1 class="font-black text-3xl md:text-4xl tracking-tight animate-slide-text drop-shadow-sm">
                 <span class="text-blue-800">Mapel</span><span class="text-red-600">Express</span>
@@ -67,17 +54,17 @@
         <div id="form-login" class="space-y-5">
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase">Email / Username</label>
-                <input type="email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="contoh@email.com">
+                <input type="email" id="login-email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="contoh@email.com">
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase flex justify-between">
                     Password
                     <a href="javascript:void(0)" class="text-blue-500 hover:text-blue-700">Lupa sandi?</a>
                 </label>
-                <input type="password" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="••••••••">
+                <input type="password" id="login-password" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="••••••••">
             </div>
 
-            <button onclick="alert('Fitur login email manual sedang dimatikan sementara. Silakan masuk pakai Google.')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(37,99,235,0.3)] transition-transform active:scale-95 text-lg">
+            <button id="btn-login" onclick="window.loginManual()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(37,99,235,0.3)] transition-transform active:scale-95 text-lg">
                 Masuk
             </button>
 
@@ -100,27 +87,27 @@
         <div id="form-register" class="space-y-4 hidden">
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase">Nama Lengkap</label>
-                <input type="text" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="Gungun M">
+                <input type="text" id="reg-name" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="Misal: Gungun M">
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase">Nomor WhatsApp</label>
-                <input type="number" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="0812...">
+                <input type="number" id="reg-wa" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="0812...">
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase">Email</label>
-                <input type="email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="contoh@email.com">
+                <input type="email" id="reg-email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="contoh@email.com">
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase">Buat Password</label>
-                <input type="password" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="••••••••">
+                <input type="password" id="reg-password" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="••••••••">
             </div>
 
-            <button onclick="alert('Fitur login sedang menggunakan Google Auth. Silakan kembali dan masuk pakai Google.')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(37,99,235,0.3)] transition-transform active:scale-95 text-lg mt-2">
+            <button id="btn-register" onclick="window.registerManual()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(37,99,235,0.3)] transition-transform active:scale-95 text-lg mt-2">
                 Buat Akun
             </button>
 
             <p class="text-center text-sm font-bold text-gray-500 mt-6">
-                Sudah punya akun? <a href="javascript:void(0)" onclick="toggleForm('login')" class="text-blue-600 hover:text-blue-800">Masuk di sini</a>
+                Sudah punya akun? <a href="javascript:void(0)" onclick="toggleForm('login')" class="text-blue-600 hover:text-blue-800">Kembali ke Login</a>
             </p>
         </div>
 
@@ -146,7 +133,7 @@
             }, 3800); 
         });
 
-        function toggleForm(target) {
+        window.toggleForm = function(target) {
             const loginForm = document.getElementById('form-login');
             const registerForm = document.getElementById('form-register');
             const title = document.getElementById('auth-title');
