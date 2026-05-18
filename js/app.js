@@ -460,10 +460,13 @@ window.exitPickingMode = function() {
     pickingMode = null;
     document.getElementById('set-lokasi-card').classList.add('opacity-0'); 
     document.getElementById('center-pin-overlay').classList.add('hidden');
+    
     setTimeout(() => { 
         document.getElementById('set-lokasi-card').classList.add('hidden'); 
-        document.getElementById('bottom-sheet').style.transform = 'translateY(calc(100% - 35px))'; 
-        isSheetOpen = false; 
+        
+        // PERBAIKAN: Setelah pilih lokasi di map, Bottom Sheet otomatis TEGAK TERBUKA, bukan nutup!
+        document.getElementById('bottom-sheet').style.transform = 'translateY(0)'; 
+        isSheetOpen = true; 
     }, 300);
 }
 
