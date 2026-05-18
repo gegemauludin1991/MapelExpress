@@ -22,10 +22,13 @@
 
     <div id="splash-screen" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center transition-all overflow-hidden">
         <img src="/assets/icons/logome.png" alt="Logo MapelExpress" class="w-40 h-40 md:w-48 md:h-48 object-contain animate-zoom-out drop-shadow-xl">
-        <div class="mt-4 w-full flex justify-center">
+        <div class="mt-4 w-full flex flex-col items-center justify-center">
             <h1 class="font-black text-3xl md:text-4xl tracking-tight animate-slide-text drop-shadow-sm">
                 <span class="text-blue-800">Mapel</span><span class="text-red-600">Express</span>
             </h1>
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mt-2 animate-slide-text drop-shadow-sm" style="animation-delay: 0.1s;">
+                Solusi Cepat Kirim Paket
+            </p>
         </div>
     </div>
 
@@ -39,12 +42,13 @@
 
         <div id="form-login" class="space-y-5">
             <div>
-                <label class="text-xs font-bold text-gray-500 uppercase">Email</label>
+                <label class="text-xs font-bold text-gray-500 uppercase">Email / Username</label>
                 <input type="email" id="login-email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="contoh@email.com">
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase flex justify-between">
                     Password
+                    <a href="javascript:void(0)" class="text-blue-500 hover:text-blue-700">Lupa sandi?</a>
                 </label>
                 <input type="password" id="login-password" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="••••••••">
             </div>
@@ -65,7 +69,7 @@
             </button>
 
             <p class="text-center text-sm font-bold text-gray-500 mt-6">
-                Belum punya akun? <a href="javascript:void(0)" onclick="toggleForm('register')" class="text-blue-600 hover:text-blue-800">Daftar sekarang</a>
+                Belum punya akun? <a href="javascript:void(0)" onclick="window.switchUI('register')" class="text-blue-600 hover:text-blue-800">Daftar sekarang</a>
             </p>
         </div>
 
@@ -92,20 +96,17 @@
             </button>
 
             <p class="text-center text-sm font-bold text-gray-500 mt-6">
-                Sudah punya akun? <a href="javascript:void(0)" onclick="toggleForm('login')" class="text-blue-600 hover:text-blue-800">Masuk di sini</a>
+                Sudah punya akun? <a href="javascript:void(0)" onclick="window.switchUI('login')" class="text-blue-600 hover:text-blue-800">Masuk di sini</a>
             </p>
         </div>
 
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/js/db.js?update=123"></script>
+    <script src="/js/db.js"></script>
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // Set history awal ke posisi login
-            history.replaceState({ form: 'login' }, "Login", "#login");
-
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
                 const authContainer = document.getElementById('auth-container');
@@ -115,11 +116,11 @@
                     authContainer.classList.remove('hidden');
                     authContainer.classList.add('form-slide-in');
                 }, 500); 
-            }, 3800); 
+            }, 3500); 
         });
 
-        // Modifikasi biar deteksi tombol Back di HP
-        function toggleForm(target, isFromHistory = false) {
+        // UI Switcher Super Clean (Tanpa numpuk history tab yang bikin error back-button)
+        window.switchUI = function(target) {
             const loginForm = document.getElementById('form-login');
             const registerForm = document.getElementById('form-register');
             const title = document.getElementById('auth-title');
@@ -130,24 +131,13 @@
                 registerForm.classList.remove('hidden');
                 title.innerText = "Buat Akun Baru";
                 subtitle.innerText = "Daftar untuk menikmati layanan kurir kami.";
-                if (!isFromHistory) history.pushState({ form: 'register' }, "Daftar", "#register");
             } else {
                 registerForm.classList.add('hidden');
                 loginForm.classList.remove('hidden');
                 title.innerText = "Selamat Datang!";
                 subtitle.innerText = "Masuk untuk mulai mengirim paket.";
-                if (!isFromHistory) history.pushState({ form: 'login' }, "Login", "#login");
             }
         }
-
-        // Kalau tombol Back HP dipencet, jalanin fungsi ini
-        window.addEventListener('popstate', (event) => {
-            if (event.state && event.state.form === 'register') {
-                toggleForm('register', true);
-            } else {
-                toggleForm('login', true);
-            }
-        });
     </script>
 </body>
 </html>
