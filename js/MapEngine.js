@@ -1,6 +1,7 @@
 /**
  * DYNAMIC MAP ENGINE (Leaflet + OSRM)
  * Khusus SPA tanpa framework (PRODUCTION READY)
+ * Fix: Akurasi Titik Tumpu (Icon Anchor) 100% Presisi
  */
 class DynamicMap {
     constructor(containerId, startLat, startLng, zoomLevel = 14) {
@@ -13,12 +14,12 @@ class DynamicMap {
 
         this.routingControl = null;
         this.simulationTimer = null;
-        this.markers = []; // Array untuk nampung marker biar gak memory leak
+        this.markers = []; // Penampung marker biar hp gak lag
         
         const kurirIcon = L.icon({
             iconUrl: '/assets/icons/kurir.png',
             iconSize: [46, 46], 
-            iconAnchor: [23, 23], 
+            iconAnchor: [23, 23], // Titik tumpu persis di tengah gambar
             popupAnchor: [0, -20]
         });
 
@@ -36,15 +37,12 @@ class DynamicMap {
         if (oldPos.lat === newLat && oldPos.lng === newLng) return;
 
         const sudut = this.hitungSudutBelok(oldPos.lat, oldPos.lng, newLat, newLng);
-        // Pengecekan aman kalau library RotatedMarker belum load
         if (typeof this.driverMarker.setRotationAngle === 'function') {
             this.driverMarker.setRotationAngle(sudut);
         }
 
         const iconElement = this.driverMarker._icon;
-        if (iconElement) {
-            iconElement.style.transition = 'transform 1s linear';
-        }
+        if (iconElement) iconElement.style.transition = 'transform 1s linear';
 
         this.driverMarker.setLatLng([newLat, newLng]);
     }
@@ -62,31 +60,41 @@ class DynamicMap {
     createCustomIcon(type) {
         let iconHtml = '';
         let iconSize = [40, 40];
-        let iconAnchor = [20, 40];
-        let popupAnchor = [0, -40];
+        let iconAnchor = [20, 20]; // Default Anchor Center
+        let popupAnchor = [0, -20];
 
+        // FIX ANCHOR: Pakai Style Inline biar gak kena efek CSS Tailwind yang bikin melar
         if (type === 'basecamp') {
-            iconHtml = `<div class="w-10 h-10 bg-blue-800 rounded-full flex items-center justify-center border-2 border-white shadow-lg text-xl">🏢</div>`;
+            iconHtml = `<div style="width: 40px; height: 40px;" class="bg-blue-800 rounded-full flex items-center justify-center border-2 border-white shadow-lg text-xl">🏢</div>`;
         } else if (type === 'ekspedisi') {
-            iconHtml = `<div class="w-8 h-8 bg-white rounded-full flex items-center justify-center border-2 border-red-500 shadow-md text-sm">📦</div>`;
+            iconHtml = `<div style="width: 32px; height: 32px;" class="bg-white rounded-full flex items-center justify-center border-2 border-red-500 shadow-md text-sm">📦</div>`;
+            iconSize = [32, 32];
+            iconAnchor = [16, 16]; 
+            popupAnchor = [0, -16];
         } else if (type === 'gps') {
-            iconHtml = `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_0_5px_rgba(59,130,246,0.3)] box-content"></div>`;
-            iconSize = [20, 20];
-            iconAnchor = [10, 10];
-            popupAnchor = [0, -15];
+            iconHtml = `<div style="width: 16px; height: 16px;" class="bg-blue-500 rounded-full border-2 border-white shadow-md box-content"></div>`;
+            iconSize = [16, 16];
+            iconAnchor = [8, 8]; 
+            popupAnchor = [0, -8];
         } 
         else if (type === 'jemput' || type === 'tujuan_personal') {
             const hexColor = type === 'jemput' ? '#2563EB' : '#DC2626';
+            // PERBAIKAN MUTLAK: Pakai SVG yang sama persis kayak crosshair di HTML lu
             iconHtml = `
-            <div style="width: 40px; height: 50px; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.3));">
-                <div style="width: 40px; height: 40px; background-color: ${hexColor}; border: 2px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; z-index: 10;">📦</div>
-                <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 12px solid ${hexColor}; margin-top: -2px; z-index: 5;"></div>
-            </div>`;
+            <svg width="40" height="50" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.3));">
+                <path d="M20 0C8.954 0 0 8.954 0 20C0 35 20 50 20 50C20 50 40 35 40 20C40 8.954 31.046 0 20 0Z" fill="${hexColor}" stroke="white" stroke-width="2"/>
+                <path d="M20 9L11 13.5V23.5L20 28L29 23.5V13.5L20 9Z" fill="white"/>
+                <path d="M11 13.5L20 18L29 13.5" stroke="${hexColor}" stroke-width="1.5" stroke-linejoin="round"/>
+                <path d="M20 18V28" stroke="${hexColor}" stroke-width="1.5" stroke-linejoin="round"/>
+            </svg>`;
             iconSize = [40, 50];
-            iconAnchor = [20, 50]; 
+            iconAnchor = [20, 50]; // TITIK TUMPU MUTLAK: Di Ujung Bawah Jarum (X: 20, Y: 50)
             popupAnchor = [0, -50];
         } else {
-            iconHtml = `<div class="w-8 h-8 bg-white rounded-full flex items-center justify-center border-2 border-gray-400 shadow-md text-sm">🛒</div>`;
+            iconHtml = `<div style="width: 32px; height: 32px;" class="bg-white rounded-full flex items-center justify-center border-2 border-gray-400 shadow-md text-sm">🛒</div>`;
+            iconSize = [32, 32];
+            iconAnchor = [16, 16];
+            popupAnchor = [0, -16];
         }
         
         return L.divIcon({ className: 'custom-div-icon bg-transparent border-0', html: iconHtml, iconSize: iconSize, iconAnchor: iconAnchor, popupAnchor: popupAnchor });
@@ -96,7 +104,8 @@ class DynamicMap {
         let theIcon;
 
         if (customLogoUrl) {
-            const iconHtml = `<div class="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-gray-200 shadow-[0_4px_10px_rgba(0,0,0,0.15)] overflow-hidden p-1.5"><img src="${customLogoUrl}" class="w-full h-full object-contain"></div>`;
+            // FIX ANCHOR: Memastikan logo custom juga punya ukuran kaku (40x40px)
+            const iconHtml = `<div style="width: 40px; height: 40px;" class="bg-white rounded-full flex items-center justify-center border border-gray-200 shadow-md overflow-hidden p-1"><img src="${customLogoUrl}" class="w-full h-full object-contain"></div>`;
             theIcon = L.divIcon({ className: 'bg-transparent border-0', html: iconHtml, iconSize: [40, 40], iconAnchor: [20, 20], popupAnchor: [0, -20] });
         } else {
             theIcon = this.createCustomIcon(type);
@@ -105,17 +114,15 @@ class DynamicMap {
         const marker = L.marker([lat, lng], { icon: theIcon }).addTo(this.map);
         if (popupContent) marker.bindPopup(popupContent);
         
-        // Simpan ke array memori biar nanti bisa dihapus
         this.markers.push(marker);
         return marker;
     }
 
-    // FUNGSI BARU: Cegah HP nge-lag karena kebanyakan marker
     clearMarkers() {
         this.markers.forEach(marker => {
             this.map.removeLayer(marker);
         });
-        this.markers = []; // Kosongkan memori array
+        this.markers = []; 
     }
 
     drawRoute(waypointsArray, callbackSummary) {
@@ -138,7 +145,7 @@ class DynamicMap {
             createMarker: function() { return null; }, 
             addWaypoints: false, 
             fitSelectedRoutes: false, 
-            show: false // Sembunyikan panel rute bawaan leaflet yang jelek
+            show: false 
         }).addTo(this.map);
 
         this.routingControl.on('routesfound', (e) => {
@@ -147,13 +154,10 @@ class DynamicMap {
             if (callbackSummary) callbackSummary(data);
         });
 
-        // PERBAIKAN: Gak pakai alert yang memblokir layar, ganti console.error & Notif UI Halus
         this.routingControl.on('routingerror', function(e) {
             console.error('OSRM Routing Error:', e);
-            // Memberikan jarak default fallback jika OSRM down (agar aplikasi tetap bisa dipakai)
             if (callbackSummary) {
-                console.warn("Menggunakan estimasi jarak udara karena server rute penuh.");
-                // Asumsi jarak lurus sementara 5KM sebagai Fallback agar aplikasi gak mati
+                console.warn("Menggunakan estimasi jarak default karena server penuh.");
                 callbackSummary({ jarakKm: "5.0", waktuMenit: 15, isFallback: true }); 
             }
         });
