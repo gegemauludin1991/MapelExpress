@@ -1,13 +1,16 @@
 /**
- * MAIN APP CONTROLLER - SISI CUSTOMER
- * (Terkoneksi Supabase, Auto-Sync Profil Google, & GPS Aktif)
+ * MAIN APP CONTROLLER - SISI CUSTOMER (PRODUCTION READY)
+ * Terintegrasi dengan MapEngine (OOP) & Supabase Realtime (db.js)
  */
 
+// ==========================================
+// 1. SETUP MAP & VARIABEL GLOBAL
+// ==========================================
 const OFFICE = { lat: -6.977414, lng: 107.555359, wa: "6281234567890", alamat: "Jl. Raya Margaasih, Kab. Bandung" };
 const myMap = typeof DynamicMap !== 'undefined' ? new DynamicMap('map', OFFICE.lat, OFFICE.lng, 14) : null;
 
 if (myMap) {
-    myMap.map.removeLayer(myMap.driverMarker);
+    if(myMap.driverMarker) myMap.map.removeLayer(myMap.driverMarker); // Hapus marker kurir dummy bawaan engine
     const officeIcon = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45], popupAnchor: [0, -40] });
     L.marker([OFFICE.lat, OFFICE.lng], { icon: officeIcon }).addTo(myMap.map).bindPopup(`
         <div class="font-sans text-center w-48 whitespace-normal">
@@ -17,8 +20,6 @@ if (myMap) {
     `);
 }
 
-const socket = window.socketBridge || { on: function(){}, emit: function(){} };
-
 function getWaktuSekarang() {
     const now = new Date();
     const bulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
@@ -26,54 +27,54 @@ function getWaktuSekarang() {
 }
 
 const kurirIcon = typeof L !== 'undefined' ? L.icon({ iconUrl: '/assets/icons/kurir.png', iconSize: [40, 40], iconAnchor: [20, 20] }) : null;
+
+// State Manajemen Order & GPS
 let liveDriverMarker = null; 
 let isOrderActive = false; 
 let currentJenisLayanan = 'personal'; 
 let customerNotifs = JSON.parse(localStorage.getItem('mapel_customer_notif')) || [];
 
+let pickingMode = null; 
+let pickupMarker = null;  
+let targetDestMarker = null; 
+let realGpsLatLng = null; 
+let realGpsMarker = null;
+let reverseGeocodeTimer = null; 
+
+// ==========================================
+// 2. INISIALISASI DATA & UI SAAT LOAD
+// ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
+    // Load Daftar Ekspedisi
     window.ekspedisiList = JSON.parse(localStorage.getItem('mapel_ekspedisi')) || [];
-    if(typeof renderPinEkspedisi === 'function') renderPinEkspedisi();
+    renderPinEkspedisi();
 
-    // MESIN AUTO-SYNC DATA PROFIL CUSTOMER KE DATABASE
-    if (typeof supabase !== 'undefined') {
+    // SINKRONISASI DATA PROFIL DARI SUPABASE
+    if (window.supabaseClient) {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                // Tarik data profil dari database (bukan cuma dari Google doang)
-                let { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (session) {
+                const { data: profile } = await window.supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
                 
-                // Menentukan nama & WA prioritas (Data Manual -> Data Google -> Default Email)
-                const finalName = profile?.full_name || user.user_metadata?.full_name || user.email.split('@')[0];
-                const finalWa = profile?.whatsapp || user.user_metadata?.whatsapp || "";
+                if (profile) {
+                    window.currentUserProfile = profile;
+                    document.getElementById('profile-name-input').value = profile.full_name || '';
+                    document.getElementById('profile-email-text').innerText = session.user.email;
+                    document.getElementById('profile-wa-input').value = profile.whatsapp || '';
 
-                // Jika user login via Google & datanya belum masuk tabel database, KITA BUATIN OTOMATIS!
-                if (!profile) {
-                    const newProfile = { id: user.id, full_name: finalName, whatsapp: finalWa, role: 'customer' };
-                    await supabase.from('profiles').upsert([newProfile]);
-                    profile = newProfile;
+                    const namaPanggilan = (profile.full_name || session.user.email).split(' ')[0];
+                    document.getElementById('header-greeting').innerText = `Hai, ${namaPanggilan}! 👋`;
                 }
-
-                // Simpan profil di memori sementara biar bisa diedit
-                window.currentUserProfile = { id: user.id, email: user.email, role: profile?.role || 'customer' };
-
-                // Update Tampilan UI Sesuai Data Asli Database
-                document.getElementById('profile-name-input').value = finalName;
-                document.getElementById('profile-email-text').innerText = user.email;
-                document.getElementById('profile-wa-input').value = finalWa;
-
-                const namaPanggilan = finalName.split(' ')[0];
-                document.getElementById('header-greeting').innerText = `Hai, ${namaPanggilan}! 👋`;
             }
         } catch(e) { console.error("Gagal menarik profil: ", e); }
     }
 
+    // Bind Tombol Modal
     const btnNotif = document.getElementById('btn-notif-customer');
     const btnProfile = document.getElementById('btn-profile');
-
     if (btnNotif) {
         btnNotif.onclick = () => {
-            if(typeof renderCustomerNotifs === 'function') renderCustomerNotifs();
+            renderCustomerNotifs();
             window.showModal('modal-cust-notif');
             const dot = document.getElementById('cust-notif-dot');
             if(dot) dot.classList.add('hidden');
@@ -82,7 +83,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (btnProfile) btnProfile.onclick = () => window.showModal('modal-cust-profile');
 });
 
-// FUNGSI MENYIMPAN EDIT PROFIL (NAMA & WA)
+// ==========================================
+// 3. LOGIC PROFIL & SYSTEM UTILS
+// ==========================================
 window.simpanProfilCustomer = async () => {
     const btn = document.getElementById('btn-save-profile');
     const inputNama = document.getElementById('profile-name-input').value;
@@ -93,46 +96,22 @@ window.simpanProfilCustomer = async () => {
     btn.innerText = "Menyimpan...";
     btn.disabled = true;
 
-    if (typeof supabase !== 'undefined' && window.currentUserProfile) {
-        // Update data ke Database Supabase
-        const { error } = await supabase.from('profiles').upsert({
-            id: window.currentUserProfile.id,
+    if (window.supabaseClient && window.currentUserProfile) {
+        const { error } = await window.supabaseClient.from('profiles').update({
             full_name: inputNama,
-            whatsapp: inputWa,
-            role: window.currentUserProfile.role
-        });
+            whatsapp: inputWa
+        }).eq('id', window.currentUserProfile.id);
 
         if (error) {
             alert("Gagal menyimpan profil: " + error.message);
         } else {
             alert("Profil berhasil diperbarui!");
-            // Update Sapaan Header
-            const namaPanggilan = inputNama.split(' ')[0];
-            document.getElementById('header-greeting').innerText = `Hai, ${namaPanggilan}! 👋`;
+            document.getElementById('header-greeting').innerText = `Hai, ${inputNama.split(' ')[0]}! 👋`;
             window.closeAllModals();
         }
     }
-
     btn.innerText = "Simpan Profil";
     btn.disabled = false;
-};
-
-// FUNGSI LOGOUT YANG MENGATASI BUG NYANGKUT
-window.eksekusiLogout = async () => {
-    if(confirm("Yakin ingin keluar dari akun ini?")) {
-        try {
-            if (typeof supabase !== 'undefined') {
-                await supabase.auth.signOut(); // Hancurkan sesi di server
-            }
-            localStorage.clear(); // Bersihkan sampah HP
-            sessionStorage.clear();
-            window.location.replace('/index.html'); // Lempar ke halaman login
-        } catch (e) {
-            console.error("Logout gagal:", e);
-            localStorage.clear();
-            window.location.replace('/index.html'); // Paksa buang walau error
-        }
-    }
 };
 
 window.showModal = (id) => {
@@ -158,29 +137,165 @@ window.closeAllModals = () => {
     }, 300);
 };
 
-window.hubungiAdmin = () => { window.open(`https://wa.me/${OFFICE.wa}?text=Halo Admin`, '_blank'); };
-window.kirimFeedback = () => { window.open(`https://wa.me/${OFFICE.wa}?text=Feedback`, '_blank'); };
+window.hubungiAdmin = () => { window.open(`https://wa.me/${OFFICE.wa}?text=Halo Admin MapelExpress, saya butuh bantuan...`, '_blank'); };
+window.kirimFeedback = () => { window.open(`https://wa.me/${OFFICE.wa}?text=Feedback Aplikasi: \n`, '_blank'); };
 
-window.swapLokasi = () => {
-    if (!pickupMarker || !targetDestMarker) return alert("Tentukan Titik Jemput dan Tujuan!");
-    const inputJemput = document.getElementById('input-jemput');
-    const inputTujuan = document.getElementById('input-tujuan');
+function renderCustomerNotifs() {
+    const list = document.getElementById('cust-notif-list');
+    if(!list) return;
+    list.innerHTML = '';
+    if(customerNotifs.length === 0) { 
+        list.innerHTML = `<p class="text-center text-gray-400 font-bold mt-10">Belum ada riwayat notifikasi</p>`; 
+        return; 
+    }
     
-    const tempText = inputJemput.value;
-    inputJemput.value = inputTujuan.value;
-    inputTujuan.value = tempText;
+    customerNotifs.forEach(n => {
+        list.innerHTML += `
+        <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm relative mb-3">
+            <div class="flex justify-between items-center mb-2">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 bg-blue-500 rounded-full"></span>
+                    <h4 class="font-black text-gray-800 text-sm">${n.title}</h4>
+                </div>
+                <span class="text-[11px] font-bold text-gray-400">${n.time}</span>
+            </div>
+            <p class="text-xs text-gray-600 leading-relaxed">${n.message || (n.alamatTujuan ? `Paket ke ${n.alamatTujuan} telah diantar.` : '')}</p>
+        </div>`;
+    });
+}
 
-    const tempLatLng = pickupMarker.getLatLng();
-    pickupMarker.setLatLng(targetDestMarker.getLatLng());
-    targetDestMarker.setLatLng(tempLatLng);
+// ==========================================
+// 4. LOGIC ORDER LANGSUNG KE SUPABASE
+// ==========================================
+document.getElementById('btn-pesan-kurir').onclick = async () => {
+    if (!pickupMarker || !targetDestMarker) return alert("Titik lokasi belum lengkap!");
+    
+    const btnPesan = document.getElementById('btn-pesan-kurir');
+    btnPesan.innerText = "Mencari Driver...";
+    btnPesan.className = "bg-gray-800 text-white font-bold py-3.5 px-6 rounded-2xl pointer-events-none animate-pulse w-full mt-2";
+    
+    const orderId = "ORD-" + Math.floor(Math.random() * 90000);
+    const orderDataJSON = {
+        jenisLayanan: currentJenisLayanan,
+        namaBarang: document.getElementById('form-nama').value || 'Paket Reguler',
+        berat: document.getElementById('form-berat').value || 1,
+        dimensi: document.getElementById('form-dimensi').value || '-',
+        keterangan: document.getElementById('form-keterangan').value || '-',
+        alamatJemput: document.getElementById('input-jemput').value,
+        jemputLat: pickupMarker.getLatLng().lat, jemputLng: pickupMarker.getLatLng().lng,
+        alamatTujuan: document.getElementById('input-tujuan').value,
+        tujuanLat: targetDestMarker.getLatLng().lat, tujuanLng: targetDestMarker.getLatLng().lng,
+        customerName: window.currentUserProfile?.full_name || 'Customer',
+        customerWa: window.currentUserProfile?.whatsapp || '',
+        tracking: [{ time: getWaktuSekarang(), status: 'Pesanan Dibuat, Mencari Driver...' }]
+    };
+    
+    window.currentOrderData = { id: orderId, ...orderDataJSON };
 
-    myMap.drawRoute([
-        { lat: pickupMarker.getLatLng().lat, lng: pickupMarker.getLatLng().lng }, 
-        { lat: targetDestMarker.getLatLng().lat, lng: targetDestMarker.getLatLng().lng }
-    ], (hasil) => document.getElementById('label-jarak-rute').innerText = `Jarak: ${hasil.jarakKm} KM`);
+    // INSERT KE TABEL ORDERS SUPABASE (REALTIME TRIGGER)
+    if(window.supabaseClient) {
+        const { error } = await window.supabaseClient.from('orders').insert({
+            id: orderId,
+            status: 'pending',
+            data: orderDataJSON
+        });
+
+        if(error) {
+            alert("Gagal membuat orderan: " + error.message);
+            btnPesan.innerText = "Pesan Kurir";
+            btnPesan.className = "bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl active:scale-95 transition-transform w-full mt-2 cursor-pointer shadow-lg";
+        } else {
+            isOrderActive = true;
+            document.getElementById('section-form-order').innerHTML = `
+                <div class="bg-blue-50 border border-blue-100 p-5 rounded-3xl mb-3 shadow-sm text-center">
+                    <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm animate-pulse"><span class="text-xl">🛵</span></div>
+                    <h4 class="font-black text-blue-800">Sedang Mencari Kurir...</h4>
+                    <p class="text-xs text-gray-500 mt-1">Mohon tunggu sebentar, sistem sedang mencarikan mitra terdekat untuk menjemput paketmu.</p>
+                </div>
+            `;
+        }
+    }
 };
 
-// MESIN GPS KEMBALI AKTIF
+// ==========================================
+// 5. LISTENER REALTIME DARI db.js
+// ==========================================
+if(window.appEvents) {
+    // A. Pantau Status Order (Driver Terima, Picked Up, Selesai)
+    window.appEvents.on('order_status_changed', (orderData) => {
+        if(!isOrderActive || orderData.id !== window.currentOrderData?.id) return;
+
+        // DRIVER ACCEPTED
+        if(orderData.status === 'accepted') {
+            const driver = orderData.data.driver; 
+            document.getElementById('section-form-order').innerHTML = `
+                <div class="bg-white border p-5 rounded-3xl mb-3 shadow-lg">
+                    <p id="status-jemput-teks" class="text-[11px] font-black text-blue-600 uppercase mb-3 animate-pulse">Kurir Menuju Lokasi Jemput</p>
+                    <div class="flex items-center gap-4">
+                        <img src="${driver?.photo || '/assets/icons/kurir.png'}" class="w-14 h-14 rounded-full border border-gray-200 object-cover">
+                        <div class="flex-1">
+                            <h4 class="font-black text-gray-800">${driver?.name || 'Mitra Driver'}</h4>
+                            <p class="text-xs text-gray-500 font-bold">${driver?.nopol || '-'}</p>
+                        </div>
+                    </div>
+                    <a href="https://wa.me/${driver?.wa || OFFICE.wa}" target="_blank" class="mt-4 flex items-center justify-center gap-2 w-full bg-[#25D366] text-white font-bold py-3 rounded-xl text-sm active:scale-95 transition-transform shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg> Hubungi Driver
+                    </a>
+                </div>
+            `;
+        } 
+        // DRIVER PICKED UP (SUDAH DIAMBIL)
+        else if (orderData.status === 'picked_up') {
+            const statusText = document.getElementById('status-jemput-teks');
+            if(statusText) {
+                statusText.innerText = "Paket Dalam Perjalanan ke Tujuan";
+                statusText.classList.replace('text-blue-600', 'text-orange-500');
+            }
+        }
+        // ORDER COMPLETED (SELESAI)
+        else if (orderData.status === 'completed') {
+            isOrderActive = false;
+            if (liveDriverMarker && myMap) myMap.map.removeLayer(liveDriverMarker);
+            
+            // Simpan ke notif lokal
+            customerNotifs.unshift({ 
+                title: "Paket Selesai Diantar 🎉", 
+                time: getWaktuSekarang(),
+                alamatTujuan: window.currentOrderData.alamatTujuan 
+            });
+            localStorage.setItem('mapel_customer_notif', JSON.stringify(customerNotifs));
+
+            // Munculin Modal Sukses
+            const successHtml = `
+                <div id="modal-success-order" class="fixed inset-0 z-[100000] flex items-center justify-center bg-gray-900 bg-opacity-70 backdrop-blur-sm p-5">
+                    <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center shadow-2xl transform transition-transform duration-300 scale-100">
+                        <div class="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                        <h2 class="text-2xl font-black text-gray-800 mb-1">Paket Terkirim!</h2>
+                        <p class="text-[12px] text-gray-500 leading-relaxed px-2">Yey! Kurir sudah berhasil mengantarkan paket kamu ke lokasi tujuan dengan aman.</p>
+                        <button onclick="location.reload()" class="w-full mt-6 bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(34,197,94,0.3)] transition-all">Tutup & Pesan Lagi</button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', successHtml);
+        }
+    });
+
+    // B. Pantau Titik GPS Driver
+    window.appEvents.on('update_driver_map', (data) => {
+        if (!isOrderActive || !myMap) return; 
+        if (!liveDriverMarker) {
+            liveDriverMarker = L.marker([data.lat, data.lng], { icon: kurirIcon, zIndexOffset: 99999 }).addTo(myMap.map);
+        } else {
+            liveDriverMarker.setLatLng([data.lat, data.lng]);
+        }
+    });
+}
+
+// ==========================================
+// 6. MAP & GPS LOGIC (PICKING, ROUTING)
+// ==========================================
 async function getAddressFromCoords(lat, lng) {
     try {
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
@@ -193,12 +308,6 @@ async function getAddressFromCoords(lat, lng) {
         return "Lokasi Terpilih";
     } catch (e) { return "Titik Terpilih"; }
 }
-
-let realGpsMarker = null; 
-let pickupMarker = null;  
-let targetDestMarker = null; 
-let realGpsLatLng = null; 
-let reverseGeocodeTimer = null; 
 
 const blueDotIcon = typeof L !== 'undefined' ? L.divIcon({ className: 'bg-transparent border-0', html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_0_4px_rgba(59,130,246,0.3)]"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] }) : null;
 
@@ -215,7 +324,7 @@ if(myMap) {
             myMap.map.setView(e.latlng, 16);
             getAddressFromCoords(e.latlng.lat, e.latlng.lng).then(alamat => {
                 const inputJemput = document.getElementById('input-jemput');
-                if(inputJemput.value === 'Mencari GPS...') inputJemput.value = alamat;
+                if(inputJemput && inputJemput.value === 'Mencari GPS...') inputJemput.value = alamat;
             });
             isFirstLoc = false; 
         }
@@ -227,39 +336,7 @@ if(myMap) {
             getAddressFromCoords(realGpsLatLng.lat, realGpsLatLng.lng).then(alamat => document.getElementById('input-jemput').value = alamat);
         }
     };
-}
 
-let pickingMode = null; 
-document.getElementById('btn-pick-jemput').onclick = () => { pickingMode = 'jemput'; enterPickingMode("Set Lokasi Jemput", "blue"); };
-document.getElementById('btn-pick-tujuan').onclick = () => { pickingMode = 'tujuan'; currentJenisLayanan = 'personal'; enterPickingMode("Set Tujuan Personal", "red"); };
-
-function enterPickingMode(btnText, color) {
-    pickingMode = currentJenisLayanan === 'personal' && btnText.includes('Tujuan') ? 'tujuan' : 'jemput';
-    document.getElementById('bottom-sheet').style.transform = 'translateY(150%)'; 
-    const hexColor = color === 'blue' ? '#2563EB' : '#DC2626';
-    document.getElementById('pin-bg').setAttribute('fill', hexColor);
-    document.querySelectorAll('#svg-pin-overlay path[stroke]').forEach(p => p.setAttribute('stroke', hexColor));
-
-    if(pickupMarker && pickingMode === 'jemput') myMap.map.removeLayer(pickupMarker);
-    if(targetDestMarker && pickingMode === 'tujuan') myMap.map.removeLayer(targetDestMarker);
-
-    document.getElementById('set-lokasi-dot').className = `w-3 h-3 rounded-full bg-${color}-500 shadow-lg border-2 border-white animate-pulse`;
-    document.getElementById('center-pin-overlay').classList.remove('hidden');
-    document.getElementById('set-lokasi-card').classList.remove('hidden');
-    setTimeout(() => { document.getElementById('set-lokasi-card').classList.remove('opacity-0'); }, 50);
-    document.getElementById('btn-set-lokasi').innerText = btnText;
-
-    document.getElementById('set-lokasi-title').innerText = "Mencari lokasi...";
-    const center = myMap.map.getCenter();
-    getAddressFromCoords(center.lat, center.lng).then(alamat => {
-        if(pickingMode) {
-            document.getElementById('set-lokasi-title').innerText = alamat;
-            document.getElementById('set-lokasi-dot').classList.remove('animate-pulse');
-        }
-    });
-}
-
-if(myMap) {
     myMap.map.on('moveend', function() {
         if(pickingMode) {
             const center = myMap.map.getCenter();
@@ -278,6 +355,47 @@ if(myMap) {
         }
     });
 }
+
+function enterPickingMode(btnText, color) {
+    pickingMode = currentJenisLayanan === 'personal' && btnText.includes('Tujuan') ? 'tujuan' : 'jemput';
+    document.getElementById('bottom-sheet').style.transform = 'translateY(150%)'; 
+    const hexColor = color === 'blue' ? '#2563EB' : '#DC2626';
+    document.getElementById('pin-bg').setAttribute('fill', hexColor);
+    document.querySelectorAll('#svg-pin-overlay path[stroke]').forEach(p => p.setAttribute('stroke', hexColor));
+
+    if(pickupMarker && pickingMode === 'jemput') myMap.map.removeLayer(pickupMarker);
+    if(targetDestMarker && pickingMode === 'tujuan') myMap.map.removeLayer(targetDestMarker);
+
+    document.getElementById('set-lokasi-dot').className = `w-3 h-3 rounded-full bg-${color}-500 shadow-lg border-2 border-white animate-pulse`;
+    document.getElementById('center-pin-overlay').classList.remove('hidden');
+    document.getElementById('set-lokasi-card').classList.remove('hidden');
+    setTimeout(() => { document.getElementById('set-lokasi-card').classList.remove('opacity-0'); }, 50);
+    document.getElementById('btn-set-lokasi').innerText = btnText;
+
+    const center = myMap.map.getCenter();
+    document.getElementById('set-lokasi-title').innerText = "Mencari lokasi...";
+    getAddressFromCoords(center.lat, center.lng).then(alamat => {
+        if(pickingMode) {
+            document.getElementById('set-lokasi-title').innerText = alamat;
+            document.getElementById('set-lokasi-dot').classList.remove('animate-pulse');
+        }
+    });
+}
+
+window.exitPickingMode = function() {
+    pickingMode = null;
+    document.getElementById('set-lokasi-card').classList.add('opacity-0'); 
+    document.getElementById('center-pin-overlay').classList.add('hidden');
+    
+    setTimeout(() => { 
+        document.getElementById('set-lokasi-card').classList.add('hidden'); 
+        const bs = document.getElementById('bottom-sheet');
+        if(bs) { bs.style.transform = 'translateY(0)'; isSheetOpen = true; }
+    }, 300);
+}
+
+document.getElementById('btn-pick-jemput').onclick = () => { pickingMode = 'jemput'; enterPickingMode("Set Lokasi Jemput", "blue"); };
+document.getElementById('btn-pick-tujuan').onclick = () => { pickingMode = 'tujuan'; currentJenisLayanan = 'personal'; enterPickingMode("Set Tujuan Personal", "red"); };
 
 document.getElementById('btn-set-lokasi').onclick = async () => {
     const btn = document.getElementById('btn-set-lokasi');
@@ -305,23 +423,85 @@ document.getElementById('btn-set-lokasi').onclick = async () => {
     btn.disabled = false;
 };
 
-// FUNGSI KELUAR DARI MODE PILIH MAP
-window.exitPickingMode = function() {
-    pickingMode = null;
-    document.getElementById('set-lokasi-card').classList.add('opacity-0'); 
-    document.getElementById('center-pin-overlay').classList.add('hidden');
+window.swapLokasi = () => {
+    if (!pickupMarker || !targetDestMarker) return alert("Tentukan Titik Jemput dan Tujuan!");
+    const inputJemput = document.getElementById('input-jemput');
+    const inputTujuan = document.getElementById('input-tujuan');
     
-    setTimeout(() => { 
-        document.getElementById('set-lokasi-card').classList.add('hidden'); 
-        const bs = document.getElementById('bottom-sheet');
-        if(bs) {
-            bs.style.transform = 'translateY(0)'; 
-            isSheetOpen = true; 
-        }
-    }, 300);
+    const tempText = inputJemput.value;
+    inputJemput.value = inputTujuan.value;
+    inputTujuan.value = tempText;
+
+    const tempLatLng = pickupMarker.getLatLng();
+    pickupMarker.setLatLng(targetDestMarker.getLatLng());
+    targetDestMarker.setLatLng(tempLatLng);
+
+    myMap.drawRoute([
+        { lat: pickupMarker.getLatLng().lat, lng: pickupMarker.getLatLng().lng }, 
+        { lat: targetDestMarker.getLatLng().lat, lng: targetDestMarker.getLatLng().lng }
+    ], (hasil) => document.getElementById('label-jarak-rute').innerText = `Jarak: ${hasil.jarakKm} KM`);
+};
+
+// ==========================================
+// 7. EKSPEDISI & RUTING LOGIC
+// ==========================================
+function getEkspedisiLogo(nama) {
+    if (!nama) return null;
+    const n = nama.toLowerCase();
+    if (n.includes('j&t') || n.includes('jnt')) return '/assets/icons/j&t.png';
+    if (n.includes('jne')) return '/assets/icons/jne.png';
+    if (n.includes('ninja')) return '/assets/icons/ninja.png';
+    if (n.includes('spx') || n.includes('shopee')) return '/assets/icons/spx.png';
+    if (n.includes('wahana')) return '/assets/icons/wahana.png';
+    if (n.includes('sicepat') || n.includes('si cepat')) return '/assets/icons/sicepat.png';
+    return null;
 }
 
-// LOGIC ORDER SAMA DENGAN ORIGINAL
+function renderPinEkspedisi() {
+    if (!window.ekspedisiList || window.ekspedisiList.length === 0 || !myMap) return;
+    window.ekspedisiList.forEach(eks => {
+        const logoUrl = getEkspedisiLogo(eks.name);
+        myMap.addMarker(
+            eks.lat, eks.lng, 'ekspedisi', 
+            `<div class="text-center font-sans"><p class="font-bold text-[13px] text-gray-800 mb-1">${eks.name}</p>
+            <button onclick="window.buatRuteKeTujuan(${eks.lat}, ${eks.lng}, '${eks.name}')" class="bg-blue-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-full w-full shadow-md">PILIH TUJUAN</button></div>`,
+            logoUrl
+        );
+    });
+}
+
+window.cariEkspedisiCepat = (brandName) => {
+    currentJenisLayanan = 'ekspedisi';
+    if (!window.ekspedisiList || window.ekspedisiList.length === 0) return alert("Belum ada ekspedisi!");
+    const target = window.ekspedisiList.find(e => e.name.toUpperCase().includes(brandName.toUpperCase()));
+    if (target) window.buatRuteKeTujuan(target.lat, target.lng, target.name);
+    else alert(`Gerai ${brandName} tidak ditemukan.`);
+};
+
+window.bukaDaftarEkspedisi = () => {
+    currentJenisLayanan = 'ekspedisi';
+    const listContainer = document.getElementById('list-semua-ekspedisi');
+    listContainer.innerHTML = '';
+    
+    if(!window.ekspedisiList || window.ekspedisiList.length === 0) {
+        listContainer.innerHTML = `<p class="text-center text-xs text-gray-400 font-bold py-4">Belum ada ekspedisi tersedia.</p>`;
+    } else {
+        window.ekspedisiList.forEach(eks => {
+            const logoUrl = getEkspedisiLogo(eks.name);
+            listContainer.innerHTML += `
+            <div onclick="window.buatRuteKeTujuan(${eks.lat}, ${eks.lng}, '${eks.name}')" class="bg-white border border-gray-100 p-3 rounded-2xl flex items-center gap-3 cursor-pointer active:bg-gray-50 mb-2 shadow-sm">
+                <div class="w-12 h-12 bg-gray-50 rounded-xl p-1.5 border border-gray-100 flex-shrink-0"><img src="${logoUrl}" class="w-full h-full object-contain"></div>
+                <div class="flex-1"><p class="text-[13px] font-black">${eks.name}</p><p class="text-[10px] text-gray-400 font-bold uppercase">Mitra Terdaftar</p></div>
+                <div class="bg-blue-50 text-blue-600 p-2 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></div>
+            </div>`;
+        });
+    }
+    
+    listContainer.classList.replace('hidden', 'flex'); listContainer.classList.add('flex-col');
+    const bs = document.getElementById('bottom-sheet');
+    if(bs) { bs.style.transform = 'translateY(0)'; isSheetOpen = true; }
+};
+
 window.buatRuteKeTujuan = (targetLat, targetLng, namaTujuan) => {
     myMap.map.closePopup();
     if (!pickupMarker) {
@@ -338,6 +518,7 @@ window.buatRuteKeTujuan = (targetLat, targetLng, namaTujuan) => {
     const iconType = currentJenisLayanan === 'ekspedisi' ? 'ekspedisi' : 'tujuan_personal';
     
     targetDestMarker = myMap.addMarker(targetLat, targetLng, iconType, `<b>${namaTujuan}</b>`, logoUrl);
+    
     const pickupPos = pickupMarker.getLatLng();
     myMap.drawRoute([{ lat: pickupPos.lat, lng: pickupPos.lng }, { lat: targetLat, lng: targetLng }], (hasil) => {
         document.getElementById('label-jarak-rute').innerText = `Jarak: ${hasil.jarakKm} KM`;
@@ -345,8 +526,9 @@ window.buatRuteKeTujuan = (targetLat, targetLng, namaTujuan) => {
         document.getElementById('section-form-order').classList.remove('hidden');
         const btnPesan = document.getElementById('btn-pesan-kurir');
         btnPesan.disabled = false;
-        btnPesan.className = "bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center pointer-events-auto cursor-pointer shadow-lg active:scale-95 transition-transform";
+        btnPesan.className = "bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center pointer-events-auto cursor-pointer shadow-lg active:scale-95 transition-transform w-full mt-2";
     });
+    
     const bs = document.getElementById('bottom-sheet');
     if(bs) { bs.style.transform = 'translateY(0)'; isSheetOpen = true; }
 };
@@ -360,25 +542,7 @@ window.batalPilihEkspedisi = () => {
     if(myMap.routingControl) myMap.map.removeControl(myMap.routingControl);
 };
 
-document.getElementById('btn-pesan-kurir').onclick = () => {
-    if (!pickupMarker || !targetDestMarker) return alert("Titik belum lengkap!");
-    const orderData = {
-        id: "ORD-" + Math.floor(Math.random() * 90000),
-        jenisLayanan: currentJenisLayanan,
-        namaBarang: document.getElementById('form-nama').value,
-        berat: document.getElementById('form-berat').value,
-        alamatJemput: document.getElementById('input-jemput').value,
-        jemputLat: pickupMarker.getLatLng().lat, jemputLng: pickupMarker.getLatLng().lng,
-        alamatTujuan: document.getElementById('input-tujuan').value,
-        tujuanLat: targetDestMarker.getLatLng().lat, tujuanLng: targetDestMarker.getLatLng().lng,
-        tracking: [{ time: getWaktuSekarang(), status: 'Pesanan Dibuat, Mencari Driver...' }]
-    };
-    window.currentOrderData = orderData;
-    document.getElementById('btn-pesan-kurir').innerText = "Mencari Driver...";
-    document.getElementById('btn-pesan-kurir').className = "bg-gray-800 text-white font-bold py-3.5 px-6 rounded-2xl pointer-events-none animate-pulse";
-    socket.emit('customer_create_order', orderData);
-};
-
+// UI Handling Bottom Sheet
 let isSheetOpen = true;
 const sheetHandle = document.getElementById('sheet-handle');
 if (sheetHandle) {
