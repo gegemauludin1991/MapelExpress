@@ -2,6 +2,9 @@
  * ADMIN CONTROLLER - MAPEL EXPRESS
  */
 
+// Gunakan Bridge Supabase
+const socket = window.socketBridge || { on: function(){}, emit: function(){} };
+
 window.toggleSidebar = function() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
@@ -22,7 +25,8 @@ window.switchMenu = function(menuId) {
     const activeNav = document.getElementById(`nav-${menuId}`);
     if(activeNav) activeNav.classList.add('active');
 
-    document.getElementById('header-title').innerText = viewTitles[menuId] || 'Admin Panel';
+    const hTitle = document.getElementById('header-title');
+    if(hTitle) hTitle.innerText = viewTitles[menuId] || 'Admin Panel';
 
     const views = ['view-radar', 'view-dispatch', 'view-ekspedisi', 'view-broadcast', 'view-pricing', 'view-promo', 'view-driver'];
     views.forEach(v => { const el = document.getElementById(v); if(el) el.classList.add('hidden'); });
@@ -33,33 +37,29 @@ window.switchMenu = function(menuId) {
         else targetView.classList.remove('hidden');
     }
 
-    if (menuId === 'radar') { setTimeout(() => adminMap.invalidateSize(), 300); updateRadarStats(); }
-    if (menuId === 'dispatch') { renderSemuaOrders(); renderDriverList(); }
-    if (menuId === 'ekspedisi') { setTimeout(() => eksMap.invalidateSize(), 300); renderTableEkspedisi(); }
-    if (menuId === 'driver') renderTableDriverAdmin();
+    if (menuId === 'radar' && typeof adminMap !== 'undefined') { setTimeout(() => adminMap.invalidateSize(), 300); }
+    if (menuId === 'ekspedisi' && typeof eksMap !== 'undefined') { setTimeout(() => eksMap.invalidateSize(), 300); }
 };
 
-window.tutupModal = (id) => { document.getElementById(id).classList.replace('flex', 'hidden'); };
+window.tutupModal = (id) => { 
+    const md = document.getElementById(id);
+    if(md) md.classList.replace('flex', 'hidden'); 
+};
 
-const socket = window.socketBridge || { on: function(){}, emit: function(){} };
+// INITIALIZE MAPS JIKA LEAFLET TERSEDIA
+let adminMap = null, eksMap = null;
+if (typeof L !== 'undefined') {
+    const OFFICE = { lat: -6.977414, lng: 107.555359 };
+    const basecampIcon = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45], popupAnchor: [0, -40] });
 
-let masterOrders = JSON.parse(localStorage.getItem('mapel_admin_master_orders')) || [];
-let masterDrivers = JSON.parse(localStorage.getItem('mapel_admin_master_drivers')) || [];
-let adminEkspedisiList = JSON.parse(localStorage.getItem('mapel_ekspedisi')) || [];
-let activeDriversOnline = {}; 
+    if(document.getElementById('admin-map')) {
+        adminMap = L.map('admin-map', { zoomControl: false }).setView([OFFICE.lat, OFFICE.lng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(adminMap);
+        L.marker([OFFICE.lat, OFFICE.lng], { icon: basecampIcon }).addTo(adminMap).bindPopup("<b>Markas MapelExpress</b>");
+    }
 
-function saveDB(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
-function getWaktu() {
-    const d = new Date(); const m = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-    return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear()}, ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+    if(document.getElementById('eks-map')) {
+        eksMap = L.map('eks-map', { zoomControl: false }).setView([OFFICE.lat, OFFICE.lng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(eksMap);
+    }
 }
-
-const OFFICE = { lat: -6.977414, lng: 107.555359 };
-const basecampIcon = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45], popupAnchor: [0, -40] });
-
-const adminMap = L.map('admin-map', { zoomControl: false }).setView([OFFICE.lat, OFFICE.lng], 14);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(adminMap);
-L.marker([OFFICE.lat, OFFICE.lng], { icon: basecampIcon }).addTo(adminMap).bindPopup("<b>Markas MapelExpress</b>");
-
-const eksMap = L.map('eks-map', { zoomControl: false }).setView([OFFICE.lat, OFFICE.lng], 14);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(eksMap);
