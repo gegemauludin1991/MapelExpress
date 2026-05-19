@@ -1,6 +1,6 @@
 /**
  * MAIN APP CONTROLLER - SISI CUSTOMER (PRODUCTION READY)
- * Terintegrasi dengan MapEngine (OOP) & Supabase Realtime (db.js)
+ * Fix: Akurasi Pin 100% Presisi & UI Bottom Sheet Anti-Ngeriut
  */
 
 // ==========================================
@@ -10,7 +10,7 @@ const OFFICE = { lat: -6.977414, lng: 107.555359, wa: "6281234567890", alamat: "
 const myMap = typeof DynamicMap !== 'undefined' ? new DynamicMap('map', OFFICE.lat, OFFICE.lng, 14) : null;
 
 if (myMap) {
-    if(myMap.driverMarker) myMap.map.removeLayer(myMap.driverMarker); // Hapus marker kurir dummy bawaan engine
+    if(myMap.driverMarker) myMap.map.removeLayer(myMap.driverMarker);
     const officeIcon = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45], popupAnchor: [0, -40] });
     L.marker([OFFICE.lat, OFFICE.lng], { icon: officeIcon }).addTo(myMap.map).bindPopup(`
         <div class="font-sans text-center w-48 whitespace-normal">
@@ -45,11 +45,9 @@ let reverseGeocodeTimer = null;
 // 2. INISIALISASI DATA & UI SAAT LOAD
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
-    // Load Daftar Ekspedisi
     window.ekspedisiList = JSON.parse(localStorage.getItem('mapel_ekspedisi')) || [];
     renderPinEkspedisi();
 
-    // SINKRONISASI DATA PROFIL DARI SUPABASE
     if (window.supabaseClient) {
         try {
             const { data: { session } } = await window.supabaseClient.auth.getSession();
@@ -69,7 +67,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch(e) { console.error("Gagal menarik profil: ", e); }
     }
 
-    // Bind Tombol Modal
     const btnNotif = document.getElementById('btn-notif-customer');
     const btnProfile = document.getElementById('btn-profile');
     if (btnNotif) {
@@ -167,12 +164,21 @@ function renderCustomerNotifs() {
 // ==========================================
 // 4. LOGIC ORDER LANGSUNG KE SUPABASE
 // ==========================================
+// BIKIN TOMBOL UI KEMBALI PROPOSIONAL
+function getBtnOrderHTML(type) {
+    if(type === 'loading') {
+        return `Mencari Driver... <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+    } else {
+        return `Pesan Kurir <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>`;
+    }
+}
+
 document.getElementById('btn-pesan-kurir').onclick = async () => {
     if (!pickupMarker || !targetDestMarker) return alert("Titik lokasi belum lengkap!");
     
     const btnPesan = document.getElementById('btn-pesan-kurir');
-    btnPesan.innerText = "Mencari Driver...";
-    btnPesan.className = "bg-gray-800 text-white font-bold py-3.5 px-6 rounded-2xl pointer-events-none animate-pulse w-full mt-2";
+    btnPesan.innerHTML = getBtnOrderHTML('loading');
+    btnPesan.className = "bg-gray-800 text-white text-[13px] font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center gap-2 pointer-events-none shadow-md"; // PERBAIKAN: Hapus w-full biar gak tergencet
     
     const orderId = "ORD-" + Math.floor(Math.random() * 90000);
     const orderDataJSON = {
@@ -202,8 +208,8 @@ document.getElementById('btn-pesan-kurir').onclick = async () => {
 
         if(error) {
             alert("Gagal membuat orderan: " + error.message);
-            btnPesan.innerText = "Pesan Kurir";
-            btnPesan.className = "bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl active:scale-95 transition-transform w-full mt-2 cursor-pointer shadow-lg";
+            btnPesan.innerHTML = getBtnOrderHTML('normal');
+            btnPesan.className = "bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 pointer-events-auto cursor-pointer shadow-lg active:scale-95";
         } else {
             isOrderActive = true;
             document.getElementById('section-form-order').innerHTML = `
@@ -221,11 +227,9 @@ document.getElementById('btn-pesan-kurir').onclick = async () => {
 // 5. LISTENER REALTIME DARI db.js
 // ==========================================
 if(window.appEvents) {
-    // A. Pantau Status Order (Driver Terima, Picked Up, Selesai)
     window.appEvents.on('order_status_changed', (orderData) => {
         if(!isOrderActive || orderData.id !== window.currentOrderData?.id) return;
 
-        // DRIVER ACCEPTED
         if(orderData.status === 'accepted') {
             const driver = orderData.data.driver; 
             document.getElementById('section-form-order').innerHTML = `
@@ -244,7 +248,6 @@ if(window.appEvents) {
                 </div>
             `;
         } 
-        // DRIVER PICKED UP (SUDAH DIAMBIL)
         else if (orderData.status === 'picked_up') {
             const statusText = document.getElementById('status-jemput-teks');
             if(statusText) {
@@ -252,12 +255,10 @@ if(window.appEvents) {
                 statusText.classList.replace('text-blue-600', 'text-orange-500');
             }
         }
-        // ORDER COMPLETED (SELESAI)
         else if (orderData.status === 'completed') {
             isOrderActive = false;
             if (liveDriverMarker && myMap) myMap.map.removeLayer(liveDriverMarker);
             
-            // Simpan ke notif lokal
             customerNotifs.unshift({ 
                 title: "Paket Selesai Diantar 🎉", 
                 time: getWaktuSekarang(),
@@ -265,7 +266,6 @@ if(window.appEvents) {
             });
             localStorage.setItem('mapel_customer_notif', JSON.stringify(customerNotifs));
 
-            // Munculin Modal Sukses
             const successHtml = `
                 <div id="modal-success-order" class="fixed inset-0 z-[100000] flex items-center justify-center bg-gray-900 bg-opacity-70 backdrop-blur-sm p-5">
                     <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center shadow-2xl transform transition-transform duration-300 scale-100">
@@ -282,7 +282,6 @@ if(window.appEvents) {
         }
     });
 
-    // B. Pantau Titik GPS Driver
     window.appEvents.on('update_driver_map', (data) => {
         if (!isOrderActive || !myMap) return; 
         if (!liveDriverMarker) {
@@ -307,6 +306,21 @@ async function getAddressFromCoords(lat, lng) {
         }
         return "Lokasi Terpilih";
     } catch (e) { return "Titik Terpilih"; }
+}
+
+// PERBAIKAN MUTLAK AKURASI PIN (Mengekstrak LatLng langsung dari Ujung Jarum Layar)
+function getPinLatLng() {
+    if (!myMap) return null;
+    const overlay = document.getElementById('svg-pin-overlay'); // Ambil SVG aslinya
+    if(!overlay) return myMap.map.getCenter();
+    
+    const rect = overlay.getBoundingClientRect();
+    // Cari letak persis koordinat ujung lancip jarum SVG (X: Tengah Gambar, Y: Bawah Gambar)
+    const pinX = rect.left + (rect.width / 2);
+    const pinY = rect.bottom;
+    
+    // Convert Pixel Layar HP ke Latitude Longitude Real Leaflet!
+    return myMap.map.containerPointToLatLng([pinX, pinY]);
 }
 
 const blueDotIcon = typeof L !== 'undefined' ? L.divIcon({ className: 'bg-transparent border-0', html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_0_4px_rgba(59,130,246,0.3)]"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] }) : null;
@@ -339,7 +353,7 @@ if(myMap) {
 
     myMap.map.on('moveend', function() {
         if(pickingMode) {
-            const center = myMap.map.getCenter();
+            const center = getPinLatLng(); // Menggunakan fungsi akurasi mutlak!
             document.getElementById('set-lokasi-title').innerText = "Mencari lokasi...";
             document.getElementById('set-lokasi-dot').classList.add('animate-pulse');
             
@@ -372,7 +386,7 @@ function enterPickingMode(btnText, color) {
     setTimeout(() => { document.getElementById('set-lokasi-card').classList.remove('opacity-0'); }, 50);
     document.getElementById('btn-set-lokasi').innerText = btnText;
 
-    const center = myMap.map.getCenter();
+    const center = getPinLatLng();
     document.getElementById('set-lokasi-title').innerText = "Mencari lokasi...";
     getAddressFromCoords(center.lat, center.lng).then(alamat => {
         if(pickingMode) {
@@ -403,7 +417,8 @@ document.getElementById('btn-set-lokasi').onclick = async () => {
     btn.innerText = "Memproses...";
     btn.disabled = true;
 
-    const center = myMap.map.getCenter();
+    // AMBIL KORDINAT PRESISI MUTLAK
+    const center = getPinLatLng(); 
     let alamat = document.getElementById('set-lokasi-title').innerText;
     
     if (alamat === "Geser peta untuk menentukan titik" || alamat === "Mencari lokasi...") {
@@ -524,9 +539,11 @@ window.buatRuteKeTujuan = (targetLat, targetLng, namaTujuan) => {
         document.getElementById('label-jarak-rute').innerText = `Jarak: ${hasil.jarakKm} KM`;
         document.getElementById('section-pilih-ekspedisi').classList.add('hidden');
         document.getElementById('section-form-order').classList.remove('hidden');
+        
         const btnPesan = document.getElementById('btn-pesan-kurir');
         btnPesan.disabled = false;
-        btnPesan.className = "bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center pointer-events-auto cursor-pointer shadow-lg active:scale-95 transition-transform w-full mt-2";
+        btnPesan.innerHTML = getBtnOrderHTML('normal');
+        btnPesan.className = "bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 pointer-events-auto cursor-pointer shadow-lg active:scale-95";
     });
     
     const bs = document.getElementById('bottom-sheet');
