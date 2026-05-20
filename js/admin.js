@@ -1,6 +1,6 @@
 /**
  * ADMIN CONTROLLER - MAPEL EXPRESS
- * Fix: Bug UI tidak responsif, Lonceng, & Simpan Ekspedisi
+ * Fix: Peek Height Handle, Error Supabase Catch, Pin Logic
  */
 
 // ===============================================
@@ -12,21 +12,18 @@ window.toggleSidebar = function() {
     if(sidebar && overlay) { sidebar.classList.toggle('-translate-x-full'); overlay.classList.toggle('hidden'); }
 };
 
-// FUNGSI INI YANG KEMARIN HILANG (Buat Dropdown Radar)
 window.togglePanel = function(id) {
     const el = document.getElementById(id);
     if(el) {
         if(el.classList.contains('active')) {
-            el.classList.remove('active'); // Tutup
+            el.classList.remove('active'); 
         } else {
-            // Tutup semua yang lain dulu biar rapi
             document.querySelectorAll('.dropdown-panel').forEach(p => p.classList.remove('active'));
-            el.classList.add('active'); // Buka
+            el.classList.add('active'); 
         }
     }
 };
 
-// FUNGSI INI YANG KEMARIN HILANG (Buat Lonceng)
 window.bukaNotifAdmin = function() {
     const modal = document.getElementById('modal-notif-admin');
     const dot = document.getElementById('admin-notif-dot');
@@ -34,16 +31,16 @@ window.bukaNotifAdmin = function() {
     if(dot) dot.classList.add('hidden'); 
 };
 
-// FUNGSI NAIK-TURUN BOTTOM SHEET EKSPEDISI ASLI LU
+// FIX: Angka translate-y disamain dengan di HTML (95px)
 window.toggleSheetEks = function() {
     const sheet = document.getElementById('sheet-ekspedisi');
     if(sheet) {
-        if(sheet.classList.contains('translate-y-[calc(100%-70px)]')) {
-            sheet.classList.remove('translate-y-[calc(100%-70px)]');
+        if(sheet.classList.contains('translate-y-[calc(100%-95px)]')) {
+            sheet.classList.remove('translate-y-[calc(100%-95px)]');
             sheet.classList.add('translate-y-0');
         } else {
             sheet.classList.remove('translate-y-0');
-            sheet.classList.add('translate-y-[calc(100%-70px)]');
+            sheet.classList.add('translate-y-[calc(100%-95px)]');
         }
     }
 };
@@ -51,12 +48,12 @@ window.toggleSheetEks = function() {
 window.toggleSheetRadius = function() {
     const sheet = document.getElementById('sheet-radius');
     if(sheet) {
-        if(sheet.classList.contains('translate-y-[calc(100%-70px)]')) {
-            sheet.classList.remove('translate-y-[calc(100%-70px)]');
+        if(sheet.classList.contains('translate-y-[calc(100%-95px)]')) {
+            sheet.classList.remove('translate-y-[calc(100%-95px)]');
             sheet.classList.add('translate-y-0');
         } else {
             sheet.classList.remove('translate-y-0');
-            sheet.classList.add('translate-y-[calc(100%-70px)]');
+            sheet.classList.add('translate-y-[calc(100%-95px)]');
         }
     }
 };
@@ -93,7 +90,6 @@ window.switchMenu = function(menuId) {
         }
     }
 
-    // Hindari Peta error Abu-Abu
     if (menuId === 'radar' && adminMap) { setTimeout(() => adminMap.invalidateSize(), 300); }
     if (menuId === 'ekspedisi' && eksMap) { setTimeout(() => eksMap.invalidateSize(), 300); }
     if (menuId === 'radius' && radiusMap) { 
@@ -111,7 +107,7 @@ let adminMap = null, eksMap = null, radiusMap = null;
 let radiusCircle = null;
 
 if (typeof L !== 'undefined') {
-    const OFFICE = { lat: -6.977414, lng: 107.555359 }; // Default jika db kosong
+    const OFFICE = { lat: -6.977414, lng: 107.555359 }; 
     const basecampIcon = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45] });
 
     if(document.getElementById('admin-map')) {
@@ -124,7 +120,6 @@ if (typeof L !== 'undefined') {
         eksMap = L.map('eks-map', { zoomControl: false }).setView([OFFICE.lat, OFFICE.lng], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(eksMap);
         
-        // Auto Update form saat peta digeser
         eksMap.on('move', function() {
             const center = eksMap.getCenter();
             document.getElementById('f-eks-lat').value = center.lat.toFixed(6);
@@ -140,7 +135,6 @@ if (typeof L !== 'undefined') {
             color: '#EF4444', fillColor: '#EF4444', fillOpacity: 0.15, weight: 2, dashArray: '5, 5', radius: 3000
         }).addTo(radiusMap);
 
-        // Auto Update form & bulatan saat peta digeser
         radiusMap.on('move', function() {
             const center = radiusMap.getCenter();
             document.getElementById('rad-lat').value = center.lat.toFixed(6);
@@ -157,7 +151,7 @@ window.updateRadiusCircle = function() {
 };
 
 // ===============================================
-// 3. DATABASE ACTION (Simpan Ekspedisi & Radius)
+// 3. DATABASE ACTION (Fix Error Handle Supabase)
 // ===============================================
 window.simpanRadius = async function() {
     const lat = document.getElementById('rad-lat').value;
@@ -166,20 +160,22 @@ window.simpanRadius = async function() {
 
     if (!lat || !lng || !km) return alert("Peta harus digeser dulu, tidak boleh kosong!");
 
-    const settingsData = { basecamp_lat: parseFloat(lat), basecamp_lng: parseFloat(lng), max_radius_km: parseFloat(km) };
-    const sb = window.supabase || (window.sb); 
+    // FIX: Cari client Supabase lu, biasanya di db.js disimpen sebagai window.sb atau window.supabase
+    const dbClient = window.sb || window.supabaseClient || window.supabase;
 
-    if(sb) {
-        try {
-            const { error } = await sb.from('settings').upsert({ id: 1, ...settingsData });
-            if (error) throw error;
-            alert(`Batas area berhasil dikunci di radius ${km} KM!`);
-        } catch(e) {
-            console.error(e);
-            alert("Gagal simpan ke Supabase. Pastikan tabel 'settings' sudah dibuat.");
-        }
-    } else {
-        alert("Sistem belum terkoneksi ke Supabase!");
+    if(!dbClient) {
+        return alert("Error Sistem: Koneksi ke Supabase gagal dimuat. Pastikan db.js aktif.");
+    }
+
+    const settingsData = { basecamp_lat: parseFloat(lat), basecamp_lng: parseFloat(lng), max_radius_km: parseFloat(km) };
+
+    try {
+        const { error } = await dbClient.from('settings').upsert({ id: 1, ...settingsData });
+        if (error) throw error;
+        alert(`Batas area berhasil dikunci di radius ${km} KM!`);
+        window.toggleSheetRadius(); // Tutup tab habis disimpen
+    } catch(e) {
+        alert("Gagal simpan ke DB! Pesan Error: " + e.message);
     }
 };
 
@@ -190,23 +186,26 @@ window.simpanEkspedisi = async function() {
     
     if(!nama || !lat || !lng) return alert("Isi Nama Cabang dan pastikan peta ada di posisi yang benar!");
     
-    const sb = window.supabase || (window.sb);
+    // FIX: Cari client Supabase
+    const dbClient = window.sb || window.supabaseClient || window.supabase;
+
+    if(!dbClient) {
+        return alert("Error Sistem: Koneksi ke Supabase gagal dimuat. Pastikan db.js aktif.");
+    }
 
     try {
-        if(sb) {
-            const { error } = await sb.from('ekspedisi').insert([{ nama: nama, lat: lat, lng: lng }]);
-            if (error) throw error;
-            
-            alert(`Titik ${nama} berhasil disimpan ke database!`);
-            document.getElementById('f-eks-nama').value = '';
-            
-            // Tambahin pin ke map langsung biar kelihatan
-            if(eksMap) L.marker([lat, lng]).addTo(eksMap).bindPopup(`<b>${nama}</b>`);
-            if(adminMap) L.marker([lat, lng]).addTo(adminMap).bindPopup(`<b>${nama}</b>`);
-        } else {
-            alert("Koneksi Supabase belum tersedia!");
-        }
+        // PERHATIAN: Pastikan tabel lu namanya 'ekspedisi' dan punya kolom (nama, lat, lng)
+        const { error } = await dbClient.from('ekspedisi').insert([{ nama: nama, lat: lat, lng: lng }]);
+        if (error) throw error;
+        
+        alert(`Titik ${nama} berhasil disimpan ke database!`);
+        document.getElementById('f-eks-nama').value = '';
+        
+        if(eksMap) L.marker([lat, lng]).addTo(eksMap).bindPopup(`<b>${nama}</b>`);
+        if(adminMap) L.marker([lat, lng]).addTo(adminMap).bindPopup(`<b>${nama}</b>`);
+        
+        window.toggleSheetEks(); // Tutup tab habis disimpen
     } catch(e) {
-        alert("Error: " + e.message);
+        alert("Gagal simpan ke DB! Pesan Error: " + e.message);
     }
 };
