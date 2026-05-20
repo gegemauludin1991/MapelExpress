@@ -72,7 +72,13 @@
             </p>
         </div>
 
-        <div id="form-register" class="space-y-4 hidden">
+        <div id="form-register" class="space-y-4 hidden pt-2">
+            <button type="button" onclick="goBackToLogin()" class="absolute top-4 left-4 p-2 bg-gray-50 rounded-full text-gray-600 border border-gray-200 hover:bg-gray-100 active:scale-95 transition-all z-50">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase">Nama Lengkap</label>
                 <input type="text" id="reg-name" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-blue-500 transition-all" placeholder="Gungun M">
@@ -95,7 +101,7 @@
             </button>
 
             <p class="text-center text-sm font-bold text-gray-500 mt-6">
-                Sudah punya akun? <a href="javascript:void(0)" onclick="switchUI('login')" class="text-blue-600 hover:text-blue-800">Masuk di sini</a>
+                Sudah punya akun? <a href="javascript:void(0)" onclick="goBackToLogin()" class="text-blue-600 hover:text-blue-800">Masuk di sini</a>
             </p>
         </div>
     </main>
@@ -103,12 +109,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-        // Inisialisasi Kredensial Supabase Lu (Langsung Tanam di Sini)
         const supabaseUrl = 'https://nahgibyegdeioquryfde.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
         const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        // 1. Animasi Splash Screen
         document.addEventListener("DOMContentLoaded", () => {
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
@@ -122,7 +126,7 @@
             }, 3000); 
         });
 
-        // 2. Togel Halaman Login / Register
+        // Togel Halaman Login / Register (TERINTEGRASI HISTORY API PENGGANTI BACK)
         function switchUI(target) {
             const loginForm = document.getElementById('form-login');
             const registerForm = document.getElementById('form-register');
@@ -134,6 +138,9 @@
                 registerForm.classList.remove('hidden');
                 title.innerText = "Buat Akun Baru";
                 subtitle.innerText = "Daftar untuk menikmati layanan kurir.";
+                
+                // Nambahin state memori browser agar tombol back HP terpicu
+                history.pushState({ page: 'register' }, 'Register', '#register');
             } else {
                 registerForm.classList.add('hidden');
                 loginForm.classList.remove('hidden');
@@ -142,7 +149,28 @@
             }
         }
 
-        // 3. Mesin Login Manual
+        // Fungsi dieksekusi saat Tombol Back UI ditekan
+        function goBackToLogin() {
+            if (history.state && history.state.page === 'register') {
+                history.back(); // Trigger HP buat neken tombol back virtual
+            } else {
+                switchUI('login'); // Fallback manual
+            }
+        }
+
+        // Listener sakti pendeteksi tombol Back Hardware (Android Back Button)
+        window.addEventListener('popstate', (event) => {
+            const loginForm = document.getElementById('form-login');
+            const registerForm = document.getElementById('form-register');
+            const title = document.getElementById('auth-title');
+            const subtitle = document.getElementById('auth-subtitle');
+            
+            registerForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            title.innerText = "Selamat Datang!";
+            subtitle.innerText = "Masuk untuk mulai mengirim paket.";
+        });
+
         async function prosesLogin() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
@@ -161,7 +189,6 @@
             }
         }
 
-        // 4. Mesin Daftar Baru
         async function prosesDaftar() {
             const name = document.getElementById('reg-name').value;
             const wa = document.getElementById('reg-wa').value;
@@ -186,7 +213,6 @@
             }
         }
 
-        // 5. Mesin Login Google
         async function prosesGoogleAuth() {
             const btn = document.getElementById('btn-google');
             btn.innerHTML = 'Memproses...';
@@ -194,7 +220,7 @@
             
             const { error } = await sb.auth.signInWithOAuth({
                 provider: 'google',
-                options: { redirectTo: window.location.origin + '/app.html' } // Arahin ke halaman customer setelah di-acc google
+                options: { redirectTo: window.location.origin + '/app.html' }
             });
             
             if(error) {
@@ -204,10 +230,8 @@
             }
         }
 
-        // 6. Listener Deteksi Otomatis (Anti-Nyasar / Anti URL Bypass)
         sb.auth.onAuthStateChange(async (event, session) => {
             if (session) {
-                // Begitu terdeteksi login, langsung cek dia Customer, Driver, atau Admin
                 const { data } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
                 const role = data?.role || 'customer';
                 
