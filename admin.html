@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Admin - MapelExpress</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -10,11 +10,12 @@
     <style>
         body { font-family: 'Nunito', sans-serif; background-color: #F8FAFC; overflow: hidden; }
         .sidebar-item.active { background-color: #EFF6FF; color: #2563EB; border-right: 4px solid #2563EB; }
-        .content-scroll::-webkit-scrollbar { width: 6px; }
-        .content-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+        .content-scroll::-webkit-scrollbar { width: 0px; background: transparent; }
         .dropdown-panel { display: none; }
         .dropdown-panel.active { display: flex; animation: slideDown 0.2s ease-out; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        /* CSS Untuk Akurasi Pin Tengah Peta */
+        .map-center-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none; filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.3)); }
     </style>
 </head>
 <body class="flex h-screen w-full relative">
@@ -30,7 +31,7 @@
             <button onclick="window.toggleSidebar()" class="md:hidden text-gray-400 hover:text-gray-600 p-1"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
         </div>
         
-        <nav class="flex-1 mt-4 overflow-y-auto content-scroll">
+        <nav class="flex-1 mt-4 overflow-y-auto content-scroll pb-10">
             <p class="px-6 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Operasional</p>
             <a href="#" onclick="window.switchMenu('radar')" id="nav-radar" class="sidebar-item active block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Radar Kurir</a>
             <a href="#" onclick="window.switchMenu('dispatch')" id="nav-dispatch" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Dispatcher Order</a>
@@ -39,46 +40,60 @@
 
             <p class="px-6 py-2 mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bisnis & User</p>
             <a href="#" onclick="window.switchMenu('pricing')" id="nav-pricing" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Pengaturan Tarif</a>
-            
             <a href="#" onclick="window.switchMenu('radius')" id="nav-radius" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Batas Jangkauan (Radius)</a>
-            
             <a href="#" onclick="window.switchMenu('promo')" id="nav-promo" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Manajemen Promo</a>
             <a href="#" onclick="window.switchMenu('driver')" id="nav-driver" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Data Internal Driver</a>
+            
+            <div class="px-6 mt-8 mb-6">
+                <button onclick="window.eksekusiLogout()" class="w-full bg-red-50 text-red-600 font-bold py-3 rounded-xl border border-red-100 hover:bg-red-100 transition-colors text-sm">Keluar Panel (Logout)</button>
+            </div>
         </nav>
     </aside>
 
     <main class="flex-1 flex flex-col h-full bg-[#F8FAFC] w-full relative">
         <header class="h-16 md:h-20 bg-white shadow-sm flex items-center justify-between px-4 md:px-8 z-[5000] flex-shrink-0 relative">
             <div class="flex items-center gap-3">
-                <button onclick="window.toggleSidebar()" class="md:hidden p-2 text-gray-600 bg-gray-100 rounded-lg"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg></button>
+                <button onclick="window.toggleSidebar()" class="md:hidden p-2 text-gray-600 bg-gray-100 rounded-lg active:scale-95"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg></button>
                 <h2 id="header-title" class="text-xl md:text-2xl font-black text-gray-800">God Eye Radar</h2>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="window.bukaNotifAdmin()" class="relative p-2 text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 active:scale-95 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                    <span id="admin-notif-dot" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                </button>
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto relative content-scroll z-10" style="height: calc(100vh - 80px);">
+        <div class="flex-1 overflow-hidden relative z-10">
             
             <div id="view-radar" class="h-full w-full relative overflow-hidden flex flex-col">
                 <div id="admin-map" class="absolute inset-0 w-full h-full z-0"></div>
                 
-                <div class="absolute top-4 left-4 right-4 md:left-6 md:right-auto z-[900] flex flex-col gap-3 pointer-events-none w-[calc(100%-2rem)] md:w-96">
+                <div class="absolute top-4 left-4 right-4 md:left-6 md:right-auto z-[2000] flex flex-col gap-3 pointer-events-none w-[calc(100%-2rem)] md:w-96">
                     <div class="bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 flex items-center px-3 py-2 pointer-events-auto">
                         <input type="text" id="radar-search" placeholder="Cari alamat / Paste Gmaps Link..." class="flex-1 bg-transparent border-none outline-none text-sm font-bold text-gray-700 placeholder-gray-400">
                         <button onclick="window.cariDiRadar()" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></button>
                     </div>
 
-                    <div class="flex gap-2 pointer-events-auto">
+                    <div class="flex gap-2 pointer-events-auto relative">
                         <button onclick="window.togglePanel('panel-stats')" class="flex-1 bg-white/95 backdrop-blur-md border border-gray-200 shadow-sm rounded-xl py-2 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 flex items-center justify-between">Statistik ▾</button>
-                        <button onclick="window.togglePanel('panel-ekslist')" class="flex-1 bg-white/95 backdrop-blur-md border border-gray-200 shadow-sm rounded-xl py-2 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 flex items-center justify-between">Titik Ekspedisi ▾</button>
+                        
+                        <div class="flex-1 relative">
+                            <button onclick="window.toggleDropdown('dropdown-menu-radar')" class="w-full bg-white/95 backdrop-blur-md border border-gray-200 shadow-sm rounded-xl py-2 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 flex items-center justify-between">Menu Ekspedisi ▾</button>
+                            
+                            <div id="dropdown-menu-radar" class="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl hidden flex-col overflow-hidden z-[3000]">
+                                <button onclick="window.switchMenu('ekspedisi')" class="w-full text-left px-4 py-3 text-xs font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-b border-gray-100">🗺️ Buka Menu Ekspedisi</button>
+                                <button onclick="window.togglePanel('panel-ekslist'); window.toggleDropdown('dropdown-menu-radar');" class="w-full text-left px-4 py-3 text-xs font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600">📋 Lihat Daftar Titik</button>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="panel-stats" class="dropdown-panel bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 flex-col overflow-hidden pointer-events-auto max-h-[60vh]">
                         <div class="grid grid-cols-2 gap-px bg-gray-100 border-b border-gray-100">
                             <div class="bg-white p-3 text-center cursor-pointer hover:bg-blue-50" onclick="window.showDetailPanel('driver')"><p class="text-[9px] font-black text-gray-400 uppercase">Driver Online</p><p id="rad-driver" class="text-lg font-black text-blue-600 leading-none mt-1">0</p></div>
                             <div class="bg-white p-3 text-center cursor-pointer hover:bg-yellow-50" onclick="window.showDetailPanel('order')"><p class="text-[9px] font-black text-gray-400 uppercase">Order Masuk</p><p id="rad-order" class="text-lg font-black text-yellow-500 leading-none mt-1">0</p></div>
-                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-green-50" onclick="window.showDetailPanel('selesai')"><p class="text-[9px] font-black text-gray-400 uppercase">Selesai</p><p id="rad-selesai" class="text-lg font-black text-green-500 leading-none mt-1">0</p></div>
-                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-red-50" onclick="window.showDetailPanel('cancel')"><p class="text-[9px] font-black text-gray-400 uppercase">Cancel</p><p id="rad-cancel" class="text-lg font-black text-red-500 leading-none mt-1">0</p></div>
                         </div>
-                        <div id="radar-detail-content" class="p-4 overflow-y-auto content-scroll text-sm hidden"></div>
                     </div>
 
                     <div id="panel-ekslist" class="dropdown-panel bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 flex-col overflow-hidden pointer-events-auto max-h-[50vh]">
@@ -88,7 +103,7 @@
                 </div>
             </div>
 
-            <div id="view-dispatch" class="w-full hidden p-4 md:p-6">
+            <div id="view-dispatch" class="h-full w-full hidden overflow-y-auto p-4 md:p-6 pb-20 content-scroll">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="font-black text-gray-800 text-xl">Kontrol Pesanan</h3>
                     <button onclick="renderSemuaOrders()" class="bg-blue-100 text-blue-700 font-bold px-4 py-2 rounded-lg text-sm hover:bg-blue-200">Refresh Data</button>
@@ -113,27 +128,29 @@
 
             <div id="view-ekspedisi" class="h-full w-full hidden relative overflow-hidden flex-col">
                 <div id="eks-map" class="absolute inset-0 w-full h-full z-0"></div>
-                <div id="sheet-ekspedisi" class="absolute bottom-0 left-0 w-full bg-white z-[4000] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] transform translate-y-[calc(100%-70px)] transition-transform duration-500 pt-3 flex flex-col h-[70vh]">
+                <div class="map-center-pin">
+                    <svg width="40" height="50" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 0C8.954 0 0 8.954 0 20C0 35 20 50 20 50C20 50 40 35 40 20C40 8.954 31.046 0 20 0Z" fill="#DC2626" stroke="white" stroke-width="2"/>
+                        <path d="M20 9L11 13.5V23.5L20 28L29 23.5V13.5L20 9Z" fill="white"/>
+                    </svg>
+                </div>
+                
+                <div id="sheet-ekspedisi" class="absolute bottom-0 left-0 w-full bg-white z-[4000] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] transform transition-transform duration-500 pt-3 flex flex-col max-h-[85vh]">
                     <div class="cursor-pointer pb-3 px-6 flex-shrink-0" onclick="window.toggleSheetEks()">
                         <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
                         <h3 class="font-black text-gray-800 text-lg text-center">Manajemen Titik Ekspedisi</h3>
                     </div>
-                    <div class="flex-1 overflow-y-auto content-scroll p-6 pt-2 grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
+                    <div class="flex-1 overflow-y-auto content-scroll px-6 pb-12 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl space-y-3 h-fit">
-                            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200 pb-1 mb-2">Pilih Cara Input Titik</p>
-                            <input type="text" id="f-eks-nama" placeholder="Nama Cabang (Cth: J&T Pusat)" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold outline-none mb-1">
-                            <div class="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-                                <p class="text-[10px] font-bold text-blue-600 mb-1">CARA 1: Paste Link Google Maps</p>
-                                <input type="text" id="f-eks-link" placeholder="https://maps.app.goo.gl/..." class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs outline-none">
+                            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200 pb-1 mb-2">Geser Map Untuk Set Kordinat</p>
+                            
+                            <input type="text" id="f-eks-nama" placeholder="Nama Cabang (Cth: J&T Pusat)" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-3 text-sm font-bold outline-none mb-1">
+                            
+                            <div class="flex gap-2">
+                                <input type="text" id="f-eks-lat" readonly placeholder="Lat" class="w-1/2 bg-gray-200 border border-gray-300 rounded-lg px-2 py-3 text-xs font-bold text-gray-600 outline-none">
+                                <input type="text" id="f-eks-lng" readonly placeholder="Lng" class="w-1/2 bg-gray-200 border border-gray-300 rounded-lg px-2 py-3 text-xs font-bold text-gray-600 outline-none">
                             </div>
-                            <div class="bg-orange-50/50 p-3 rounded-lg border border-orange-100">
-                                <p class="text-[10px] font-bold text-orange-600 mb-1">CARA 2: Tap Map / Ketik Koordinat</p>
-                                <div class="flex gap-2">
-                                    <input type="text" id="f-eks-lat" placeholder="Lat (-6.xxx)" class="w-1/2 bg-white border border-gray-300 rounded-lg px-2 py-2 text-xs outline-none">
-                                    <input type="text" id="f-eks-lng" placeholder="Lng (107.xxx)" class="w-1/2 bg-white border border-gray-300 rounded-lg px-2 py-2 text-xs outline-none">
-                                </div>
-                            </div>
-                            <button onclick="window.simpanEkspedisi()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2 shadow-md">Simpan Titik ke Database</button>
+                            <button onclick="window.simpanEkspedisi()" class="w-full bg-blue-600 active:bg-blue-700 text-white font-black py-4 rounded-xl mt-2 shadow-lg transition-transform active:scale-95">Simpan Titik ke Database</button>
                         </div>
                         <div class="border border-gray-100 rounded-xl overflow-hidden h-fit flex flex-col bg-white">
                             <table class="w-full text-left">
@@ -149,178 +166,68 @@
 
             <div id="view-radius" class="h-full w-full hidden relative overflow-hidden flex-col">
                 <div id="radius-map" class="absolute inset-0 w-full h-full z-0"></div>
+                <div class="map-center-pin">
+                    <img src="/assets/icons/pin.png" class="w-12 h-12 object-contain drop-shadow-md">
+                </div>
                 
-                <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.2)] border border-gray-200 p-5 z-[4000]">
-                    <div class="flex items-center gap-3 mb-4 border-b border-gray-100 pb-3">
-                        <div class="w-10 h-10 bg-red-50 text-red-600 flex items-center justify-center rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg></div>
-                        <div>
-                            <h3 class="font-black text-gray-800 text-lg leading-tight">Geofencing Operasional</h3>
-                            <p class="text-[10px] font-bold text-gray-500">Atur jangkauan area order customer</p>
+                <div class="absolute bottom-0 left-0 w-full bg-white z-[4000] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] flex flex-col transform transition-transform duration-300">
+                    <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mt-3 mb-2"></div>
+                    <div class="p-6 pb-12">
+                        <div class="flex items-center gap-3 mb-4 border-b border-gray-100 pb-3">
+                            <div class="w-10 h-10 bg-red-50 text-red-600 flex items-center justify-center rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg></div>
+                            <div>
+                                <h3 class="font-black text-gray-800 text-lg leading-tight">Geofencing Operasional</h3>
+                                <p class="text-[10px] font-bold text-gray-500">Geser peta untuk mengubah titik pusat Basecamp</p>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-500 uppercase">Lat Pusat Basecamp</label>
-                            <input type="text" id="rad-lat" oninput="window.updateRadiusPreview()" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold outline-none" value="-6.977414">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-500 uppercase">Lng Pusat Basecamp</label>
-                            <input type="text" id="rad-lng" oninput="window.updateRadiusPreview()" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-xs font-bold outline-none" value="107.555359">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-500 uppercase">Maksimal Radius Peta (KM)</label>
-                        <div class="relative mt-1">
-                            <input type="number" id="rad-km" oninput="window.updateRadiusPreview()" class="w-full bg-blue-50 border border-blue-300 text-blue-700 rounded-lg px-3 py-3 font-black outline-none" value="3">
-                            <span class="absolute right-3 top-3 text-blue-600 font-black text-sm">Kilometer</span>
-                        </div>
-                        <p class="text-[9px] text-gray-400 mt-1 font-bold">*Customer di luar radius ini tidak akan bisa membuat order.</p>
-                    </div>
-                    <button onclick="window.simpanRadius()" class="w-full bg-gray-900 hover:bg-black text-white font-black py-3.5 rounded-xl mt-4 shadow-lg transition-colors flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
-                        Simpan Area Pembatasan
-                    </button>
-                </div>
-            </div>
-
-            <div id="view-broadcast" class="w-full hidden p-4 md:p-6">
-                <div class="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                    <h3 class="font-black text-gray-800 text-lg mb-1">Broadcast Pesan System</h3>
-                    <p class="text-xs text-gray-500 mb-6">Pesan ini akan masuk ke Lonceng Notifikasi aplikasi pengguna.</p>
-                    <div class="space-y-4">
-                        <div><label class="text-[10px] font-bold text-gray-500 uppercase">Target Penerima</label><select id="bc-target" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-bold outline-none"><option value="all">Semua (Driver & Customer)</option><option value="driver">Khusus Driver</option><option value="customer">Khusus Customer</option></select></div>
-                        <div><label class="text-[10px] font-bold text-gray-500 uppercase">Judul Pesan</label><input type="text" id="bc-title" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-bold outline-none" placeholder="Cth: Info Pemeliharaan Server"></div>
-                        <div><label class="text-[10px] font-bold text-gray-500 uppercase">Isi Pesan Lengkap</label><textarea id="bc-msg" rows="5" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-bold outline-none" placeholder="Ketik pesan broadcast disini..."></textarea></div>
-                        <button onclick="kirimBroadcast()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-md transition-colors">🚀 Kirim Broadcast Sekarang</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="view-pricing" class="w-full hidden p-4 md:p-6">
-                <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
-                    <h3 class="font-black text-gray-800 text-xl mb-6 border-b border-gray-100 pb-4">Konfigurasi Tarif Dinamis</h3>
-                    <div class="space-y-6">
-                        <div>
-                            <h4 class="text-sm font-black text-blue-600 mb-3 bg-blue-50 py-2 px-3 rounded-lg border border-blue-100 inline-block">1. Komponen Biaya Dasar</h4>
-                            <div class="flex gap-4">
-                                <div class="flex-1"><label class="text-[10px] font-bold text-gray-500 uppercase">Tarif Flat (2 KM Pertama)</label><div class="relative mt-1"><span class="absolute left-3 top-3 text-gray-500 font-bold text-sm">Rp</span><input type="number" id="tf-base" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-4 py-3 font-bold outline-none"></div></div>
-                                <div class="flex-1"><label class="text-[10px] font-bold text-gray-500 uppercase">Tarif Per-KM (Selanjutnya)</label><div class="relative mt-1"><span class="absolute left-3 top-3 text-gray-500 font-bold text-sm">Rp</span><input type="number" id="tf-perkm" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-4 py-3 font-bold outline-none"></div></div>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-500 uppercase">Lat Pusat</label>
+                                <input type="text" id="rad-lat" readonly class="w-full mt-1 bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-600 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-500 uppercase">Lng Pusat</label>
+                                <input type="text" id="rad-lng" readonly class="w-full mt-1 bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-600 outline-none">
                             </div>
                         </div>
                         <div>
-                            <h4 class="text-sm font-black text-orange-600 mb-3 bg-orange-50 py-2 px-3 rounded-lg border border-orange-100 inline-block">2. Biaya Beban & Dimensi</h4>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                <div><label class="text-[10px] font-bold text-gray-500 uppercase">Batas Berat Gratis</label><div class="relative mt-1"><input type="number" id="tf-maxkg" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-bold outline-none"><span class="absolute right-4 top-3 text-gray-500 font-bold text-sm">KG</span></div></div>
-                                <div><label class="text-[10px] font-bold text-gray-500 uppercase">Denda Per Extra KG</label><div class="relative mt-1"><span class="absolute left-3 top-3 text-gray-500 font-bold text-sm">Rp</span><input type="number" id="tf-extrakg" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-4 py-3 font-bold outline-none"></div></div>
-                                <div class="col-span-2 md:col-span-1"><label class="text-[10px] font-bold text-gray-500 uppercase">Denda Dimensi Besar</label><div class="relative mt-1"><span class="absolute left-3 top-3 text-gray-500 font-bold text-sm">Rp</span><input type="number" id="tf-dimensi" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-4 py-3 font-bold outline-none"></div></div>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Maksimal Radius (KM)</label>
+                            <div class="relative mt-1">
+                                <input type="number" id="rad-km" oninput="window.updateRadiusCircle()" class="w-full bg-blue-50 border border-blue-300 text-blue-700 rounded-xl px-4 py-3 font-black outline-none text-lg" value="3">
+                                <span class="absolute right-4 top-3 text-blue-600 font-black text-sm">Kilometer</span>
                             </div>
                         </div>
-                        <div>
-                            <h4 class="text-sm font-black text-green-600 mb-3 bg-green-50 py-2 px-3 rounded-lg border border-green-100 inline-block">3. Pengaturan Diskon</h4>
-                            <div class="w-full md:w-1/2"><label class="text-[10px] font-bold text-gray-500 uppercase">Diskon Global (%)</label><div class="relative mt-1"><input type="number" id="tf-disc" class="w-full bg-green-50 border border-green-300 text-green-700 rounded-xl px-4 py-3 font-bold outline-none"><span class="absolute right-4 top-3 text-green-600 font-black text-lg">%</span></div></div>
-                        </div>
-                        <button onclick="simpanTarif()" class="w-full bg-gray-900 hover:bg-black text-white font-black py-4 rounded-xl mt-4 shadow-lg transition-colors">💾 Simpan Semua Konfigurasi</button>
+                        <button onclick="window.simpanRadius()" class="w-full bg-gray-900 active:bg-black text-white font-black py-4 rounded-xl mt-5 shadow-xl transition-transform active:scale-95 flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                            Simpan Area Pembatasan
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <div id="view-promo" class="w-full hidden p-4 md:p-6 pb-10">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 h-fit">
-                        <h3 class="font-black text-gray-800 text-lg mb-4">Buat Banner Promo</h3>
-                        <input type="text" id="prm-title" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-3 font-bold mb-4 text-sm outline-none" placeholder="Judul Promo (Internal)">
-                        <div class="w-full h-48 bg-gray-50 border-2 border-dashed border-blue-300 rounded-xl flex items-center justify-center relative overflow-hidden mb-4 hover:bg-gray-100 transition-colors">
-                            <img id="prm-preview" class="hidden w-full h-full object-cover">
-                            <div id="prm-placeholder" class="text-center text-blue-500 pointer-events-none">
-                                <span class="text-2xl mb-2 block">📸</span><p class="text-xs font-bold">Klik untuk Upload</p>
-                            </div>
-                            <input type="file" id="prm-file" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
-                        </div>
-                        <button onclick="simpanPromo()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md">Terbitkan Promo</button>
-                    </div>
-                    <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                        <h3 class="font-black text-gray-800 text-lg mb-4 border-b border-gray-100 pb-3">Daftar Banner Aktif</h3>
-                        <div id="list-promo" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
-                    </div>
+            <div id="view-broadcast" class="w-full hidden overflow-y-auto p-4 md:p-6 pb-20 content-scroll">
                 </div>
-            </div>
-
-            <div id="view-driver" class="w-full hidden p-4 md:p-6 pb-10">
-                <div class="flex justify-between items-center mb-6">
-                    <div><h3 class="font-black text-gray-800 text-xl">Database Akun</h3><p class="text-xs text-gray-500 mt-1 hidden md:block">Buat kredensial login untuk mitra driver internal.</p></div>
-                    <button onclick="window.bukaModalDriver()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm text-xs transition-all border border-blue-700">+ Tambah Driver Baru</button>
+            <div id="view-pricing" class="w-full hidden overflow-y-auto p-4 md:p-6 pb-20 content-scroll">
                 </div>
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-x-auto">
-                    <table class="w-full text-left min-w-[600px]">
-                        <thead class="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase font-black">
-                            <tr><th class="p-4 pl-6">ID & Profil</th><th class="p-4">Kredensial Login</th><th class="p-4">Kendaraan</th><th class="p-4">Status</th><th class="p-4 text-center">Aksi</th></tr>
-                        </thead>
-                        <tbody id="table-driver-crud" class="divide-y divide-gray-100 text-sm"></tbody>
-                    </table>
+            <div id="view-promo" class="w-full hidden overflow-y-auto p-4 md:p-6 pb-20 content-scroll">
                 </div>
-            </div>
+            <div id="view-driver" class="w-full hidden overflow-y-auto p-4 md:p-6 pb-20 content-scroll">
+                </div>
 
         </div>
     </main>
 
     <div id="modal-detail-pesanan" class="fixed inset-0 z-[10000] bg-gray-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
-        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50">
-                <h3 class="font-black text-lg text-gray-800">Manajemen Order</h3>
-                <button onclick="window.tutupModal('modal-detail-pesanan')" class="bg-gray-200 p-2 hover:bg-gray-300 rounded-full font-bold text-gray-600">✖</button>
-            </div>
-            <div class="p-6 overflow-y-auto flex-1 space-y-5" id="detail-pesanan-body"></div>
-            <div class="p-5 border-t border-gray-200 bg-white flex gap-3">
-                <button onclick="batalPesananDariAdmin()" class="w-1/3 bg-red-100 hover:bg-red-200 text-red-700 font-bold py-3 rounded-xl text-sm transition-colors">Batal Paksa</button>
-                <button onclick="window.tutupModal('modal-detail-pesanan')" class="w-2/3 bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-xl text-sm shadow-md transition-colors">Selesai & Tutup</button>
-            </div>
         </div>
-    </div>
 
     <div id="modal-form-driver" class="fixed inset-0 z-[10000] bg-gray-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
-        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
-            <div class="flex justify-between items-center p-5 border-b border-gray-100 bg-blue-600 text-white">
-                <h3 class="font-black text-lg">Buat Akun Driver Internal</h3>
-                <button onclick="window.tutupModal('modal-form-driver')" class="text-white hover:text-gray-200 font-bold">✖</button>
-            </div>
-            <div class="p-6 space-y-4 overflow-y-auto flex-1">
-                <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl mb-2">
-                    <p class="text-[10px] text-blue-700 font-bold leading-tight">Driver tidak perlu mendaftar mandiri. Admin membuatkan akun di sini, dan Driver cukup login menggunakan Email & Password yang dibuat di bawah.</p>
-                </div>
-                
-                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-1">1. Kredensial Login</h4>
-                <div class="grid grid-cols-1 mb-2">
-                    <div><label class="text-xs font-bold text-gray-600">ID Pegawai (Opsional)</label><input type="text" id="d-id" placeholder="IDME-001" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 font-black outline-none uppercase text-gray-700 tracking-wider"></div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="text-xs font-bold text-gray-600">Email Login</label><input type="email" id="d-user" placeholder="driver@mapelexpress.com" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 font-bold outline-none"></div>
-                    <div><label class="text-xs font-bold text-gray-600">Password</label><input type="text" id="d-pass" placeholder="Minimal 6 Huruf/Angka" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 font-bold outline-none"></div>
-                </div>
-
-                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-1 pt-2">2. Data Pribadi</h4>
-                <div><label class="text-xs font-bold text-gray-600">Nama Lengkap Driver</label><input type="text" id="d-nama" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 font-bold outline-none"></div>
-                <div><label class="text-xs font-bold text-gray-600">No. WhatsApp</label><input type="number" id="d-wa" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 font-bold outline-none"></div>
-
-                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-1 pt-2">3. Data Kendaraan</h4>
-                <div class="grid grid-cols-3 gap-3">
-                    <div class="col-span-1"><label class="text-xs font-bold text-gray-600">Jenis</label><select id="d-tipe" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 font-bold outline-none"><option value="Motor">Motor</option><option value="Mobil">Mobil</option></select></div>
-                    <div class="col-span-1"><label class="text-xs font-bold text-gray-600">No. Polisi</label><input type="text" id="d-nopol" placeholder="D 1234 XY" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-2 py-2 font-bold outline-none uppercase"></div>
-                    <div class="col-span-1"><label class="text-xs font-bold text-gray-600">Warna</label><input type="text" id="d-warna" placeholder="Hitam" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-2 py-2 font-bold outline-none"></div>
-                </div>
-                <input type="hidden" id="d-edit-index" value="-1">
-            </div>
-            <div class="p-5 border-t border-gray-100 bg-gray-50 flex gap-3">
-                <button onclick="window.tutupModal('modal-form-driver')" class="flex-1 bg-white border border-gray-300 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-100 transition-colors">Batal</button>
-                <button onclick="window.simpanAkunDriver()" id="btn-save-driver" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-blue-700 transition-colors">Buat Akun Driver</button>
-            </div>
         </div>
-    </div>
 
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-      <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-      <script src="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
-      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-      <script src="/js/admin.js?v=3"></script> 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <script src="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/js/admin.js?v=4"></script> 
 </body>
 </html>
