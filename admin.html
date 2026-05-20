@@ -15,6 +15,8 @@
         .dropdown-panel { display: none; }
         .dropdown-panel.active { display: flex; animation: slideDown 0.2s ease-out; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        /* CSS Pin Geofencing Tetap Dipertahankan */
+        .map-center-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none; filter: drop-shadow(0px 4px 5px rgba(0,0,0,0.4)); }
     </style>
 </head>
 <body class="flex h-screen w-full relative">
@@ -51,7 +53,6 @@
                 <button onclick="window.toggleSidebar()" class="md:hidden p-2 text-gray-600 bg-gray-100 rounded-lg"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg></button>
                 <h2 id="header-title" class="text-xl md:text-2xl font-black text-gray-800">God Eye Radar</h2>
             </div>
-            
             <div class="flex items-center gap-3">
                 <button onclick="window.bukaNotifAdmin()" class="relative p-2 text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 active:scale-95 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
@@ -78,11 +79,12 @@
 
                     <div id="panel-stats" class="dropdown-panel bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 flex-col overflow-hidden pointer-events-auto max-h-[60vh]">
                         <div class="grid grid-cols-2 gap-px bg-gray-100 border-b border-gray-100">
-                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-blue-50"><p class="text-[9px] font-black text-gray-400 uppercase">Driver Online</p><p id="rad-driver" class="text-lg font-black text-blue-600 leading-none mt-1">0</p></div>
-                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-yellow-50"><p class="text-[9px] font-black text-gray-400 uppercase">Order Masuk</p><p id="rad-order" class="text-lg font-black text-yellow-500 leading-none mt-1">0</p></div>
-                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-green-50"><p class="text-[9px] font-black text-gray-400 uppercase">Selesai</p><p id="rad-selesai" class="text-lg font-black text-green-500 leading-none mt-1">0</p></div>
-                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-red-50"><p class="text-[9px] font-black text-gray-400 uppercase">Cancel</p><p id="rad-cancel" class="text-lg font-black text-red-500 leading-none mt-1">0</p></div>
+                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-blue-50" onclick="window.showDetailPanel('driver')"><p class="text-[9px] font-black text-gray-400 uppercase">Driver Online</p><p id="rad-driver" class="text-lg font-black text-blue-600 leading-none mt-1">0</p></div>
+                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-yellow-50" onclick="window.showDetailPanel('order')"><p class="text-[9px] font-black text-gray-400 uppercase">Order Masuk</p><p id="rad-order" class="text-lg font-black text-yellow-500 leading-none mt-1">0</p></div>
+                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-green-50" onclick="window.showDetailPanel('selesai')"><p class="text-[9px] font-black text-gray-400 uppercase">Selesai</p><p id="rad-selesai" class="text-lg font-black text-green-500 leading-none mt-1">0</p></div>
+                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-red-50" onclick="window.showDetailPanel('cancel')"><p class="text-[9px] font-black text-gray-400 uppercase">Cancel</p><p id="rad-cancel" class="text-lg font-black text-red-500 leading-none mt-1">0</p></div>
                         </div>
+                        <div id="radar-detail-content" class="p-4 overflow-y-auto content-scroll text-sm hidden"></div>
                     </div>
 
                     <div id="panel-ekslist" class="dropdown-panel bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 flex-col overflow-hidden pointer-events-auto max-h-[50vh]">
@@ -94,8 +96,6 @@
 
             <div id="view-ekspedisi" class="h-full w-full hidden relative overflow-hidden flex-col">
                 <div id="eks-map" class="absolute inset-0 w-full h-full z-0"></div>
-                
-                <img src="/assets/icons/pin.png" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-[2000] w-12 h-12 object-contain pointer-events-none drop-shadow-md" alt="Tengah">
                 
                 <div id="sheet-ekspedisi" class="absolute bottom-0 left-0 w-full bg-white z-[4000] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] transform translate-y-[calc(100%-95px)] transition-transform duration-500 pt-3 flex flex-col h-[75vh]">
                     <div class="cursor-pointer pb-3 px-6 flex-shrink-0" onclick="window.toggleSheetEks()">
@@ -138,8 +138,7 @@
 
             <div id="view-radius" class="h-full w-full hidden relative overflow-hidden flex-col">
                 <div id="radius-map" class="absolute inset-0 w-full h-full z-0"></div>
-                
-                <img src="/assets/icons/pin.png" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-[2000] w-12 h-12 object-contain pointer-events-none drop-shadow-md" alt="Tengah">
+                <img src="/assets/icons/pin.png" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-[2000] w-12 h-12 object-contain pointer-events-none drop-shadow-md">
                 
                 <div id="sheet-radius" class="absolute bottom-0 left-0 w-full bg-white z-[4000] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] transform translate-y-[calc(100%-95px)] transition-transform duration-500 pt-3 flex flex-col max-h-[60vh]">
                     <div class="cursor-pointer pb-3 px-6 flex-shrink-0" onclick="window.toggleSheetRadius()">
