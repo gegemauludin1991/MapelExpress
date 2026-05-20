@@ -1,10 +1,10 @@
 /**
  * ADMIN CONTROLLER - MAPEL EXPRESS
- * Fix: Logic TAP MAP Ekspedisi, Popup Edit Alamat Basecamp, & Bypass Error Supabase
+ * Fix: Tap Ekspedisi, Geofence MoveEnd, Popup Dinamis, Error Handling
  */
 
 // ===============================================
-// 1. UI HANDLERS (Modal & Sidebar)
+// 1. UI HANDLERS
 // ===============================================
 window.toggleSidebar = function() {
     const sidebar = document.getElementById('sidebar');
@@ -95,62 +95,57 @@ window.switchMenu = function(menuId) {
     }
 };
 
+
 // ===============================================
 // 2. INISIALISASI PETA, PIN, DAN POPUP
 // ===============================================
 let adminMap = null, eksMap = null, radiusMap = null;
 let radiusCircle = null;
-let tempEksMarker = null; // Marker sementara saat admin nge-tap peta ekspedisi
+let tempEksMarker = null;
 
-// HTML Form buat ditaruh di dalam Popup Pin Perusahaan
+// FORM POPUP DINAMIS UNTUK BASECAMP
 const popupBasecampHTML = `
     <div style="min-width: 160px; padding: 4px;">
         <p class="text-xs font-black text-gray-800 mb-1 border-b border-gray-200 pb-1">Lokasi Basecamp</p>
         <p class="text-[9px] text-gray-500 font-bold mb-2">Ubah alamat detail perusahaan:</p>
-        <textarea id="bc-alamat-input" class="w-full bg-gray-50 border border-gray-300 rounded p-1.5 text-xs outline-none mb-2" rows="2">Jalan Raya Mapel No. 1, Bandung</textarea>
+        <textarea id="bc-alamat-input" class="w-full bg-gray-50 border border-gray-300 rounded p-1.5 text-xs outline-none mb-2" rows="2">Jalan Raya Mapel No. 1</textarea>
         <button onclick="window.simpanAlamatBC()" class="w-full bg-blue-600 text-white font-bold py-1.5 rounded text-[10px] shadow-sm active:bg-blue-700">Simpan Perubahan</button>
     </div>
 `;
 
 window.simpanAlamatBC = function() {
     const alamatBaru = document.getElementById('bc-alamat-input').value;
-    // Logika simpan DB masuk sini nanti
     alert("Berhasil! Alamat Basecamp di-update menjadi:\n" + alamatBaru);
 };
 
 if (typeof L !== 'undefined') {
     const OFFICE = { lat: -6.977414, lng: 107.555359 }; 
-    const basecampIcon = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45], popupAnchor: [0, -40] });
+    const basecampIcon = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [40, 40], iconAnchor: [20, 40], popupAnchor: [0, -35] });
 
     // --- MAP RADAR ---
     if(document.getElementById('admin-map')) {
         adminMap = L.map('admin-map', { zoomControl: false }).setView([OFFICE.lat, OFFICE.lng], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(adminMap);
-        // Pasang Pin Perusahaan Statis + Popup Form
         L.marker([OFFICE.lat, OFFICE.lng], { icon: basecampIcon }).addTo(adminMap).bindPopup(popupBasecampHTML);
     }
 
-    // --- MAP EKSPEDISI (FIX: Pakai TAP/CLICK) ---
+    // --- MAP EKSPEDISI ---
     if(document.getElementById('eks-map')) {
-        eksMap = L.map('eks-map', { zoomControl: false }).setView([OFFICE.lat, OFFICE.lng], 15);
+        eksMap = L.map('eks-map', { zoomControl: false }).setView([OFFICE.lat, OFFICE.lng], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(eksMap);
-        
-        // Pasang Pin Perusahaan Statis + Popup Form
         L.marker([OFFICE.lat, OFFICE.lng], { icon: basecampIcon }).addTo(eksMap).bindPopup(popupBasecampHTML);
         
-        // LOGIC BARU: Admin klik map, ambil koordinat, taruh pin biru sementara
+        // LOGIC KLIK/TAP MAP UNTUK EKSPEDISI
         eksMap.on('click', function(e) {
             document.getElementById('f-eks-lat').value = e.latlng.lat.toFixed(6);
             document.getElementById('f-eks-lng').value = e.latlng.lng.toFixed(6);
             
-            // Hapus pin sementara yang lama (kalau ada)
             if(tempEksMarker) eksMap.removeLayer(tempEksMarker);
-            // Bikin pin penanda titik tap
-            tempEksMarker = L.marker(e.latlng).addTo(eksMap).bindPopup("<b>Titik Ekspedisi Baru</b>").openPopup();
+            tempEksMarker = L.marker(e.latlng).addTo(eksMap).bindPopup("<b>Titik Baru</b>").openPopup();
         });
     }
 
-    // --- MAP GEOFENCING (Tetap pakai center pin) ---
+    // --- MAP GEOFENCING ---
     if(document.getElementById('radius-map')) {
         radiusMap = L.map('radius-map', { zoomControl: false }).setView([OFFICE.lat, OFFICE.lng], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(radiusMap);
@@ -159,11 +154,19 @@ if (typeof L !== 'undefined') {
             color: '#EF4444', fillColor: '#EF4444', fillOpacity: 0.15, weight: 2, dashArray: '5, 5', radius: 3000
         }).addTo(radiusMap);
 
-        radiusMap.on('move', function() {
+        // LOGIC BARU: Lingkaran hanya pindah ketika SELESAI GESER MAP (moveend), jadi nggak kelihatan aneh
+        radiusMap.on('moveend', function() {
             const center = radiusMap.getCenter();
             document.getElementById('rad-lat').value = center.lat.toFixed(6);
             document.getElementById('rad-lng').value = center.lng.toFixed(6);
             radiusCircle.setLatLng(center);
+        });
+        
+        // Buat update form secara real-time saat digeser, tanpa mindahin lingkarannya dulu
+        radiusMap.on('move', function() {
+            const center = radiusMap.getCenter();
+            document.getElementById('rad-lat').value = center.lat.toFixed(6);
+            document.getElementById('rad-lng').value = center.lng.toFixed(6);
         });
     }
 }
@@ -174,9 +177,36 @@ window.updateRadiusCircle = function() {
     radiusCircle.setRadius(km * 1000); 
 };
 
+
 // ===============================================
-// 3. DATABASE ACTION (Fix Bypass Error)
+// 3. DATABASE ACTION & FETCH DATA
 // ===============================================
+
+// FUNGSI UNTUK MENAMPILKAN PIN EKSPEDISI DARI DATABASE
+window.loadEkspedisi = async function() {
+    if (!window.sb) return; 
+    
+    // Icon khusus untuk ekspedisi (pakai pin yang sama, atau bisa lu ubah url-nya nanti)
+    const iconEks = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [35, 35], iconAnchor: [17.5, 35] });
+
+    try {
+        const { data, error } = await window.sb.from('ekspedisi').select('*');
+        if (data) {
+            data.forEach(titik => {
+                if(eksMap) L.marker([titik.lat, titik.lng], { icon: iconEks }).addTo(eksMap).bindPopup(`<b>${titik.nama}</b>`);
+                if(adminMap) L.marker([titik.lat, titik.lng], { icon: iconEks }).addTo(adminMap).bindPopup(`<b>${titik.nama}</b>`);
+            });
+        }
+    } catch(err) {
+        console.error("Gagal load ekspedisi:", err);
+    }
+};
+
+// Panggil fetch ekspedisi setelah 1 detik halaman dimuat
+setTimeout(() => {
+    window.loadEkspedisi();
+}, 1000);
+
 window.simpanRadius = async function() {
     const lat = document.getElementById('rad-lat').value;
     const lng = document.getElementById('rad-lng').value;
@@ -185,22 +215,17 @@ window.simpanRadius = async function() {
     if (!lat || !lng || !km) return alert("Peta harus digeser dulu!");
 
     const dbClient = window.sb || window.supabaseClient || window.supabase;
+    if(!dbClient) return alert("ERROR: File db.js belum menambahkan 'window.sb = supabase;'");
+
     const settingsData = { basecamp_lat: parseFloat(lat), basecamp_lng: parseFloat(lng), max_radius_km: parseFloat(km) };
 
-    if(dbClient && dbClient.from) {
-        try {
-            const { error } = await dbClient.from('settings').upsert({ id: 1, ...settingsData });
-            if (error) throw error;
-            alert(`Batas area terkunci di radius ${km} KM!`);
-            window.toggleSheetRadius();
-        } catch(e) {
-            alert("Error Supabase: " + e.message);
-        }
-    } else {
-        // BYPASS: Kalau db.js belum sempurna, jalankan UI-nya aja biar admin tau fungsinya jalan
-        console.warn("Supabase tidak terdeteksi. Menyimpan di Local Storage sementara.");
-        alert(`(SIMULASI) Batas area berhasil diset ke ${km} KM.\nCatatan: Database belum tersambung sempurna.`);
+    try {
+        const { error } = await dbClient.from('settings').upsert({ id: 1, ...settingsData });
+        if (error) throw error;
+        alert(`Batas area terkunci di radius ${km} KM!`);
         window.toggleSheetRadius();
+    } catch(e) {
+        alert("Gagal Simpan Database: Pastikan tabel 'settings' ada di Supabase. Error: " + e.message);
     }
 };
 
@@ -212,28 +237,23 @@ window.simpanEkspedisi = async function() {
     if(!nama || !lat || !lng) return alert("Isi Nama Cabang dan Tap peta untuk menentukan titik!");
     
     const dbClient = window.sb || window.supabaseClient || window.supabase;
+    if(!dbClient) return alert("ERROR: File db.js belum menambahkan 'window.sb = supabase;'");
 
-    if(dbClient && dbClient.from) {
-        try {
-            const { error } = await dbClient.from('ekspedisi').insert([{ nama: nama, lat: lat, lng: lng }]);
-            if (error) throw error;
-            
-            alert(`Titik ${nama} tersimpan!`);
-            document.getElementById('f-eks-nama').value = '';
-            if(tempEksMarker) eksMap.removeLayer(tempEksMarker);
-            
-            L.marker([lat, lng]).addTo(eksMap).bindPopup(`<b>${nama}</b>`);
-            window.toggleSheetEks(); 
-        } catch(e) {
-            alert("Error Supabase: " + e.message);
-        }
-    } else {
-        // BYPASS: Kalau gagal nyambung DB, tetap tunjukin marker sukses di map lokal
-        alert(`(SIMULASI) Titik ${nama} berhasil ditambahkan.\nCatatan: Database belum tersambung sempurna.`);
+    try {
+        const { error } = await dbClient.from('ekspedisi').insert([{ nama: nama, lat: lat, lng: lng }]);
+        if (error) throw error;
+        
+        alert(`Titik ${nama} tersimpan!`);
         document.getElementById('f-eks-nama').value = '';
         if(tempEksMarker) eksMap.removeLayer(tempEksMarker);
         
-        L.marker([lat, lng]).addTo(eksMap).bindPopup(`<b>${nama}</b>`);
-        window.toggleSheetEks();
+        // Render langsung ke map
+        const iconEks = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [35, 35], iconAnchor: [17.5, 35] });
+        L.marker([lat, lng], { icon: iconEks }).addTo(eksMap).bindPopup(`<b>${nama}</b>`);
+        if(adminMap) L.marker([lat, lng], { icon: iconEks }).addTo(adminMap).bindPopup(`<b>${nama}</b>`);
+        
+        window.toggleSheetEks(); 
+    } catch(e) {
+        alert("Gagal Simpan Database: Pastikan tabel 'ekspedisi' ada di Supabase. Error: " + e.message);
     }
 };
