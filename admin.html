@@ -15,8 +15,6 @@
         .dropdown-panel { display: none; }
         .dropdown-panel.active { display: flex; animation: slideDown 0.2s ease-out; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Hanya untuk Geofencing Center Pin */
-        .map-center-pin { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); z-index: 1000; pointer-events: none; filter: drop-shadow(0px 4px 5px rgba(0,0,0,0.4)); }
     </style>
 </head>
 <body class="flex h-screen w-full relative">
@@ -83,7 +81,7 @@
                         </div>
                     </div>
                     <div id="panel-ekslist" class="dropdown-panel bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 flex-col overflow-hidden pointer-events-auto max-h-[50vh]">
-                        <div class="p-3 bg-gray-50 border-b border-gray-100"><p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Daftar Titik</p></div>
+                        <div class="p-3 bg-gray-50 border-b border-gray-100"><p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Daftar Titik (Klik untuk menuju lokasi)</p></div>
                         <div id="radar-eks-list" class="overflow-y-auto content-scroll flex-1 p-2 space-y-1"></div>
                     </div>
                 </div>
@@ -91,6 +89,7 @@
 
             <div id="view-ekspedisi" class="h-full w-full hidden relative overflow-hidden flex-col">
                 <div id="eks-map" class="absolute inset-0 w-full h-full z-0"></div>
+                
                 <div id="sheet-ekspedisi" class="absolute bottom-0 left-0 w-full bg-white z-[4000] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] transform translate-y-[calc(100%-95px)] transition-transform duration-500 pt-3 flex flex-col h-[75vh]">
                     <div class="cursor-pointer pb-3 px-6 flex-shrink-0" onclick="window.toggleSheetEks()">
                         <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
@@ -99,7 +98,7 @@
 
                     <div class="flex-1 overflow-y-auto content-scroll p-6 pt-2 grid grid-cols-1 md:grid-cols-2 gap-6 pb-32 mb-10">
                         <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl space-y-3 h-fit">
-                            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200 pb-1 mb-2">TAP / KLIK PETA UNTUK SET TITIK</p>
+                            <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest border-b border-gray-200 pb-1 mb-2">TAP / KLIK PETA UNTUK SET TITIK</p>
                             <input type="text" id="f-eks-nama" placeholder="Nama Cabang (Cth: J&T Pusat)" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold outline-none mb-1">
                             
                             <div class="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
@@ -131,8 +130,6 @@
             <div id="view-radius" class="h-full w-full hidden relative overflow-hidden flex-col">
                 <div id="radius-map" class="absolute inset-0 w-full h-full z-0"></div>
                 
-                <img src="/assets/icons/pin.png" class="map-center-pin w-12 h-12 object-contain drop-shadow-md">
-                
                 <div id="sheet-radius" class="absolute bottom-0 left-0 w-full bg-white z-[4000] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] transform translate-y-[calc(100%-95px)] transition-transform duration-500 pt-3 flex flex-col max-h-[60vh]">
                     <div class="cursor-pointer pb-3 px-6 flex-shrink-0" onclick="window.toggleSheetRadius()">
                         <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
@@ -140,7 +137,7 @@
                     </div>
                     
                     <div class="flex-1 overflow-y-auto content-scroll px-6 pb-24 mb-6">
-                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200 pb-1 mb-3">Geser Peta Untuk Ubah Titik Basecamp</p>
+                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200 pb-1 mb-3">Atur Jangkauan Operasional (Radius)</p>
                         
                         <div class="grid grid-cols-2 gap-3 mb-3">
                             <div><label class="text-[10px] font-bold text-gray-500 uppercase">Lat Pusat</label><input type="text" id="rad-lat" readonly class="w-full mt-1 bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-600 outline-none"></div>
