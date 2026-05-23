@@ -87,7 +87,7 @@ window.switchMenu = function(menuId) {
         const el = document.getElementById(v); 
         if(el) {
             el.classList.add('hidden'); 
-            el.classList.remove('flex', 'block');
+            el.classList.remove('flex', 'flex-col', 'block');
         }
     });
     
@@ -95,7 +95,7 @@ window.switchMenu = function(menuId) {
     if(targetView) {
         targetView.classList.remove('hidden');
         if(menuId === 'ekspedisi' || menuId === 'radius' || menuId === 'radar') {
-            targetView.classList.add('flex');
+            targetView.classList.add('flex', 'flex-col');
         } else {
             targetView.classList.add('block');
         }
@@ -114,14 +114,17 @@ function getIconEkspedisi(namaCabang) {
     let iconFile = 'pin.png'; 
     let bgColor = '#ffffff'; 
 
+    // SUDAH DITAMBAHKAN WAHANA, JNT, SICEPAT (Spasi/Tanpa spasi)
     if (nama.includes('jne')) iconFile = 'jne.png';
-    else if (nama.includes('j&t') || nama.includes('jnt')) iconFile = 'jnt.png';
-    else if (nama.includes('sicepat')) iconFile = 'sicepat.png';
+    else if (nama.includes('j&t') || nama.includes('jnt') || nama.includes('j & t')) iconFile = 'jnt.png';
+    else if (nama.includes('sicepat') || nama.includes('si cepat')) iconFile = 'sicepat.png';
     else if (nama.includes('shopee') || nama.includes('spx')) iconFile = 'spx.png';
     else if (nama.includes('ninja')) { iconFile = 'ninja.png'; bgColor = '#dc2626'; } 
     else if (nama.includes('anteraja')) iconFile = 'anteraja.png';
+    else if (nama.includes('wahana')) iconFile = 'wahana.png'; 
 
-    // Desain Card Bulat, Icon diperbesar
+    // HARAP PASTIKAN FILE GAMBAR (wahana.png, jnt.png, dll) BENAR-BENAR ADA DI FOLDER /assets/icons/
+
     const htmlMarker = `
         <div style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; background-color:${bgColor}; border-radius:50%; box-shadow:0 4px 10px rgba(0,0,0,0.3); border:2px solid white; overflow:hidden;">
             <img src="/assets/icons/${iconFile}" style="width:30px; height:30px; object-fit:contain;" onerror="this.src='/assets/icons/pin.png'" />
@@ -205,11 +208,15 @@ window.loadEkspedisi = async function() {
     try {
         const { data, error } = await window.sb.from('ekspedisi').select('*');
         if (data) {
+            // Bersihkan marker map lama
             arrayMarkerEkspedisi.forEach(m => m.remove());
             arrayMarkerEkspedisi = [];
 
+            // Reset isi tabel & list dropdown
             const tabelEks = document.getElementById('table-ekspedisi');
+            const listRadar = document.getElementById('radar-eks-list');
             if(tabelEks) tabelEks.innerHTML = '';
+            if(listRadar) listRadar.innerHTML = '';
 
             data.forEach(titik => {
                 const iconEks = getIconEkspedisi(titik.nama); 
@@ -221,9 +228,11 @@ window.loadEkspedisi = async function() {
                     </div>
                 `;
 
+                // Render Map Marker
                 if(eksMap) arrayMarkerEkspedisi.push(L.marker([titik.lat, titik.lng], { icon: iconEks }).addTo(eksMap).bindPopup(popupContent));
                 if(adminMap) arrayMarkerEkspedisi.push(L.marker([titik.lat, titik.lng], { icon: iconEks }).addTo(adminMap).bindPopup(popupContent));
 
+                // 1. Render Tabel di Setup Ekspedisi
                 if(tabelEks) {
                     tabelEks.innerHTML += `
                         <tr>
@@ -232,6 +241,16 @@ window.loadEkspedisi = async function() {
                                 <button onclick="window.hapusEkspedisi(${titik.id}, '${titik.nama}')" style="background:#fee2e2; color:#dc2626; padding:4px 8px; border-radius:4px; font-weight:bold;">Hapus</button>
                             </td>
                         </tr>
+                    `;
+                }
+
+                // 2. Render List di Dropdown God Eye Radar
+                if(listRadar) {
+                    listRadar.innerHTML += `
+                        <div class="bg-white border border-gray-100 p-2 rounded-lg shadow-sm flex justify-between items-center cursor-pointer hover:bg-gray-50" onclick="if(adminMap) adminMap.setView([${titik.lat}, ${titik.lng}], 16)">
+                            <p class="text-xs font-bold text-gray-700">${titik.nama}</p>
+                            <span class="text-[10px] text-gray-400 font-bold">Lihat Lokasi</span>
+                        </div>
                     `;
                 }
             });
@@ -247,7 +266,7 @@ window.hapusEkspedisi = async function(id, nama) {
     try {
         const { error } = await window.sb.from('ekspedisi').delete().eq('id', id);
         if (error) throw error;
-        window.loadEkspedisi();
+        window.loadEkspedisi(); // Auto update setelah hapus
     } catch(e) { alert("❌ GAGAL MENGHAPUS: " + e.message); }
 };
 
@@ -264,35 +283,33 @@ window.simpanRadius = async function() {
 window.simpanEkspedisi = async function() {
     try {
         const nama = document.getElementById('f-eks-nama').value;
-        const lat = parseFloat(document.getElementById('f-eks-lat').value);
-        const lng = parseFloat(document.getElementById('f-eks-lng').value);
+        const latStr = document.getElementById('f-eks-lat').value;
+        const lngStr = document.getElementById('f-eks-lng').value;
         
-        if(!nama || !lat || !lng) return alert("⚠️ ISI NAMA CABANG & TAP PETA DULU!");
+        if(!nama || !latStr || !lngStr) return alert("⚠️ ISI NAMA CABANG & TAP PETA DULU!");
         if(!window.sb) return alert("🚨 Database tidak terkoneksi!");
 
-        const { error } = await window.sb.from('ekspedisi').insert([{ nama: nama, lat: lat, lng: lng }]);
+        const { error } = await window.sb.from('ekspedisi').insert([{ nama: nama, lat: parseFloat(latStr), lng: parseFloat(lngStr) }]);
         if (error) throw error;
         
         document.getElementById('f-eks-nama').value = '';
         if(tempEksMarker) eksMap.removeLayer(tempEksMarker);
         
-        window.loadEkspedisi(); 
+        window.loadEkspedisi(); // Auto Render setelah simpan
         window.toggleSheetEks(); 
         
     } catch(e) { alert("❌ ERROR: " + e.message); }
 };
 
 // ===============================================
-// 5. SALURAN DATA (REALTIME BRIDGE KE CUSTOMER/DRIVER)
+// 5. SALURAN DATA (REALTIME BRIDGE)
 // ===============================================
 if (window.sb) {
     window.sb.channel('public:ekspedisi_settings')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'ekspedisi' }, payload => {
-            console.log('Update Data Ekspedisi:', payload);
             window.loadEkspedisi();
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => {
-            console.log('Update Settings Radius:', payload);
             if(payload.new && payload.new.max_radius_km && radiusCircle) {
                 document.getElementById('rad-km').value = payload.new.max_radius_km;
                 window.updateRadiusCircle();
