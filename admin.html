@@ -82,8 +82,7 @@
                     </div>
                     <div id="panel-ekslist" class="dropdown-panel bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 flex-col overflow-hidden pointer-events-auto max-h-[50vh]">
                         <div class="p-3 bg-gray-50 border-b border-gray-100"><p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Daftar Titik Aktif</p></div>
-                        <div id="radar-eks-list" class="overflow-y-auto content-scroll flex-1 p-2 space-y-1">
-                            </div>
+                        <div id="radar-eks-list" class="overflow-y-auto content-scroll flex-1 p-2 space-y-1"></div>
                     </div>
                 </div>
             </div>
@@ -98,12 +97,18 @@
                     </div>
 
                     <div class="flex-1 overflow-y-auto content-scroll p-6 pt-2 grid grid-cols-1 md:grid-cols-2 gap-6 pb-32 mb-10">
+                        
                         <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl space-y-3 h-fit">
                             <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest border-b border-gray-200 pb-1 mb-2">TAP / KLIK PETA UNTUK SET TITIK</p>
                             <input type="text" id="f-eks-nama" placeholder="Nama Cabang (Cth: J&T Pusat)" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold outline-none mb-1">
                             
+                            <div class="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                                <p class="text-[10px] font-bold text-blue-600 mb-1">CARA 1: Paste Link Google Maps</p>
+                                <input type="text" id="f-eks-link" placeholder="https://maps.app.goo.gl/..." class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs outline-none">
+                            </div>
+
                             <div class="bg-orange-50/50 p-3 rounded-lg border border-orange-100">
-                                <p class="text-[10px] font-bold text-orange-600 mb-1">Koordinat Titik</p>
+                                <p class="text-[10px] font-bold text-orange-600 mb-1">CARA 2: Tap Map / Ketik Koordinat</p>
                                 <div class="flex gap-2">
                                     <input type="text" id="f-eks-lat" readonly placeholder="Lat (-6.xxx)" class="w-1/2 bg-gray-100 border border-gray-300 rounded-lg px-2 py-2 text-xs outline-none font-bold text-gray-500">
                                     <input type="text" id="f-eks-lng" readonly placeholder="Lng (107.xxx)" class="w-1/2 bg-gray-100 border border-gray-300 rounded-lg px-2 py-2 text-xs outline-none font-bold text-gray-500">
@@ -111,15 +116,22 @@
                             </div>
                             <button onclick="window.simpanEkspedisi()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2 shadow-md">Simpan Titik ke Database</button>
                         </div>
-                        <div class="border border-gray-100 rounded-xl overflow-hidden h-fit flex flex-col bg-white">
-                            <table class="w-full text-left">
-                                <thead class="bg-gray-100 text-[10px] text-gray-500 uppercase font-black">
-                                    <tr><th class="p-3">Daftar Gerai Aktif</th><th class="p-3 text-center">Aksi</th></tr>
-                                </thead>
-                                <tbody id="table-ekspedisi" class="divide-y divide-gray-100 text-xs font-bold text-gray-700">
-                                    </tbody>
-                            </table>
+                        
+                        <div class="border border-gray-200 rounded-xl flex flex-col bg-white shadow-sm" style="max-height: 250px;">
+                            <div class="overflow-y-auto content-scroll w-full h-full rounded-xl">
+                                <table class="w-full text-left relative">
+                                    <thead class="bg-gray-100 text-[10px] text-gray-500 uppercase font-black sticky top-0 z-10 shadow-sm">
+                                        <tr>
+                                            <th class="p-3">Daftar Gerai Aktif</th>
+                                            <th class="p-3 text-center w-20">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-ekspedisi" class="divide-y divide-gray-100 text-xs font-bold text-gray-700">
+                                        </tbody>
+                                </table>
+                            </div>
                         </div>
+
                     </div>
                 </div>
             </div>
