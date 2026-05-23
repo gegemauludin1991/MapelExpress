@@ -81,8 +81,9 @@
                         </div>
                     </div>
                     <div id="panel-ekslist" class="dropdown-panel bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 flex-col overflow-hidden pointer-events-auto max-h-[50vh]">
-                        <div class="p-3 bg-gray-50 border-b border-gray-100"><p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Daftar Titik</p></div>
-                        <div id="radar-eks-list" class="overflow-y-auto content-scroll flex-1 p-2 space-y-1"></div>
+                        <div class="p-3 bg-gray-50 border-b border-gray-100"><p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Daftar Titik Aktif</p></div>
+                        <div id="radar-eks-list" class="overflow-y-auto content-scroll flex-1 p-2 space-y-1">
+                            </div>
                     </div>
                 </div>
             </div>
@@ -101,13 +102,8 @@
                             <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest border-b border-gray-200 pb-1 mb-2">TAP / KLIK PETA UNTUK SET TITIK</p>
                             <input type="text" id="f-eks-nama" placeholder="Nama Cabang (Cth: J&T Pusat)" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold outline-none mb-1">
                             
-                            <div class="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-                                <p class="text-[10px] font-bold text-blue-600 mb-1">CARA 1: Paste Link Google Maps</p>
-                                <input type="text" id="f-eks-link" placeholder="https://maps.app.goo.gl/..." class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs outline-none">
-                            </div>
-
                             <div class="bg-orange-50/50 p-3 rounded-lg border border-orange-100">
-                                <p class="text-[10px] font-bold text-orange-600 mb-1">CARA 2: Tap Map / Ketik Koordinat</p>
+                                <p class="text-[10px] font-bold text-orange-600 mb-1">Koordinat Titik</p>
                                 <div class="flex gap-2">
                                     <input type="text" id="f-eks-lat" readonly placeholder="Lat (-6.xxx)" class="w-1/2 bg-gray-100 border border-gray-300 rounded-lg px-2 py-2 text-xs outline-none font-bold text-gray-500">
                                     <input type="text" id="f-eks-lng" readonly placeholder="Lng (107.xxx)" class="w-1/2 bg-gray-100 border border-gray-300 rounded-lg px-2 py-2 text-xs outline-none font-bold text-gray-500">
@@ -120,7 +116,8 @@
                                 <thead class="bg-gray-100 text-[10px] text-gray-500 uppercase font-black">
                                     <tr><th class="p-3">Daftar Gerai Aktif</th><th class="p-3 text-center">Aksi</th></tr>
                                 </thead>
-                                <tbody id="table-ekspedisi" class="divide-y divide-gray-100 text-xs font-bold text-gray-700"></tbody>
+                                <tbody id="table-ekspedisi" class="divide-y divide-gray-100 text-xs font-bold text-gray-700">
+                                    </tbody>
                             </table>
                         </div>
                     </div>
@@ -158,24 +155,34 @@
             </div>
 
             <div id="view-dispatch" class="w-full hidden p-4 md:p-6 pb-24">
-                <h3 class="font-black text-gray-800 text-xl mb-4">Manajemen Dispatcher</h3>
-                <p class="text-sm text-gray-500 font-bold">Pantau dan kelola antrean order di sini.</p>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="font-black text-gray-800 text-xl mb-2">Dispatcher Order</h3>
+                    <p class="text-sm text-gray-500 font-bold">Daftar pesanan masuk akan tampil di sini (Dalam Pengembangan).</p>
+                </div>
             </div>
             <div id="view-broadcast" class="w-full hidden p-4 md:p-6 pb-24">
-                <h3 class="font-black text-gray-800 text-xl mb-4">Broadcast Pesan Global</h3>
-                <p class="text-sm text-gray-500 font-bold">Kirim pesan massal ke driver dan customer.</p>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="font-black text-gray-800 text-xl mb-2">Broadcast Pesan</h3>
+                    <p class="text-sm text-gray-500 font-bold">Kirim pesan massal ke driver (Dalam Pengembangan).</p>
+                </div>
             </div>
             <div id="view-pricing" class="w-full hidden p-4 md:p-6 pb-24">
-                <h3 class="font-black text-gray-800 text-xl mb-4">Konfigurasi Tarif</h3>
-                <p class="text-sm text-gray-500 font-bold">Atur skema harga dan biaya per kilometer.</p>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="font-black text-gray-800 text-xl mb-2">Pengaturan Tarif</h3>
+                    <p class="text-sm text-gray-500 font-bold">Setting harga ongkir per KM (Dalam Pengembangan).</p>
+                </div>
             </div>
             <div id="view-promo" class="w-full hidden p-4 md:p-6 pb-24">
-                <h3 class="font-black text-gray-800 text-xl mb-4">Manajemen Promo</h3>
-                <p class="text-sm text-gray-500 font-bold">Buat dan kelola voucher promosi.</p>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="font-black text-gray-800 text-xl mb-2">Manajemen Promo</h3>
+                    <p class="text-sm text-gray-500 font-bold">List voucher diskon aktif (Dalam Pengembangan).</p>
+                </div>
             </div>
             <div id="view-driver" class="w-full hidden p-4 md:p-6 pb-24">
-                <h3 class="font-black text-gray-800 text-xl mb-4">Data Internal Driver</h3>
-                <p class="text-sm text-gray-500 font-bold">Kelola armada kurir yang terdaftar.</p>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 class="font-black text-gray-800 text-xl mb-2">Data Internal Driver</h3>
+                    <p class="text-sm text-gray-500 font-bold">List database mitra pengemudi (Dalam Pengembangan).</p>
+                </div>
             </div>
 
         </div>
@@ -192,13 +199,10 @@
             </div>
         </div>
     </div>
-    
-    <div id="modal-detail-pesanan" class="fixed inset-0 z-[10000] bg-gray-900/70 backdrop-blur-sm hidden items-center justify-center p-4"></div>
-    <div id="modal-form-driver" class="fixed inset-0 z-[10000] bg-gray-900/70 backdrop-blur-sm hidden items-center justify-center p-4"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/js/db.js"></script>
-    <script src="/js/admin.js?v=777"></script> 
+    <script src="/js/admin.js?v=999"></script> 
 </body>
 </html>
