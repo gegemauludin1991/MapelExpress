@@ -87,14 +87,13 @@ window.switchMenu = function(menuId) {
         const el = document.getElementById(v); 
         if(el) {
             el.classList.add('hidden'); 
-            el.classList.remove('flex', 'block'); // Bersihkan class lama
+            el.classList.remove('flex', 'block');
         }
     });
     
     const targetView = document.getElementById(`view-${menuId}`);
     if(targetView) {
         targetView.classList.remove('hidden');
-        // Pastikan tampilan peta tetap flex, menu lain jadi block biar nggak blank
         if(menuId === 'ekspedisi' || menuId === 'radius' || menuId === 'radar') {
             targetView.classList.add('flex');
         } else {
@@ -113,17 +112,16 @@ window.switchMenu = function(menuId) {
 function getIconEkspedisi(namaCabang) {
     let nama = namaCabang.toLowerCase();
     let iconFile = 'pin.png'; 
-    let bgColor = '#ffffff'; // Warna dasar bulat putih
+    let bgColor = '#ffffff'; 
 
-    // Deteksi nama
     if (nama.includes('jne')) iconFile = 'jne.png';
     else if (nama.includes('j&t') || nama.includes('jnt')) iconFile = 'jnt.png';
     else if (nama.includes('sicepat')) iconFile = 'sicepat.png';
     else if (nama.includes('shopee') || nama.includes('spx')) iconFile = 'spx.png';
-    else if (nama.includes('ninja')) { iconFile = 'ninja.png'; bgColor = '#dc2626'; } // Ninja background merah
+    else if (nama.includes('ninja')) { iconFile = 'ninja.png'; bgColor = '#dc2626'; } 
     else if (nama.includes('anteraja')) iconFile = 'anteraja.png';
 
-    // Desain Card Bulat (width 40px), Icon Dalam diperbesar jadi 30px (hampir penuhi lingkaran)
+    // Desain Card Bulat, Icon diperbesar
     const htmlMarker = `
         <div style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; background-color:${bgColor}; border-radius:50%; box-shadow:0 4px 10px rgba(0,0,0,0.3); border:2px solid white; overflow:hidden;">
             <img src="/assets/icons/${iconFile}" style="width:30px; height:30px; object-fit:contain;" onerror="this.src='/assets/icons/pin.png'" />
@@ -151,9 +149,7 @@ const popupBasecampHTML = `
     </div>
 `;
 
-window.simpanAlamatBC = function() {
-    alert("Berhasil! Alamat Basecamp di-update!");
-};
+window.simpanAlamatBC = function() { alert("Berhasil! Alamat Basecamp di-update!"); };
 
 if (typeof L !== 'undefined') {
     const basecampIcon = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [40, 40], iconAnchor: [20, 40], popupAnchor: [0, -35] });
@@ -198,7 +194,6 @@ window.updateRadiusCircle = function() {
     radiusCircle.setRadius(km * 1000); 
 };
 
-
 // ===============================================
 // 4. DATABASE ACTION & FETCH DATA
 // ===============================================
@@ -210,7 +205,6 @@ window.loadEkspedisi = async function() {
     try {
         const { data, error } = await window.sb.from('ekspedisi').select('*');
         if (data) {
-            // Bersihkan marker lama
             arrayMarkerEkspedisi.forEach(m => m.remove());
             arrayMarkerEkspedisi = [];
 
@@ -253,7 +247,7 @@ window.hapusEkspedisi = async function(id, nama) {
     try {
         const { error } = await window.sb.from('ekspedisi').delete().eq('id', id);
         if (error) throw error;
-        window.loadEkspedisi(); // Langsung render ulang petanya
+        window.loadEkspedisi();
     } catch(e) { alert("❌ GAGAL MENGHAPUS: " + e.message); }
 };
 
@@ -292,17 +286,16 @@ window.simpanEkspedisi = async function() {
 // 5. SALURAN DATA (REALTIME BRIDGE KE CUSTOMER/DRIVER)
 // ===============================================
 if (window.sb) {
-    // Listener ini nangkep kalau ada perubahan data dari Customer/Driver, atau Admin lain
     window.sb.channel('public:ekspedisi_settings')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'ekspedisi' }, payload => {
             console.log('Update Data Ekspedisi:', payload);
-            window.loadEkspedisi(); // Auto update peta Admin
+            window.loadEkspedisi();
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => {
             console.log('Update Settings Radius:', payload);
             if(payload.new && payload.new.max_radius_km && radiusCircle) {
                 document.getElementById('rad-km').value = payload.new.max_radius_km;
-                window.updateRadiusCircle(); // Auto perbesar lingkaran
+                window.updateRadiusCircle();
             }
         })
         .subscribe();
