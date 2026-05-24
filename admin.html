@@ -50,7 +50,6 @@
                 <button onclick="window.toggleSidebar()" class="md:hidden p-2 text-gray-600 bg-gray-100 rounded-lg"><svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg></button>
                 <h2 id="header-title" class="text-xl md:text-2xl font-black text-gray-800">God Eye Radar</h2>
             </div>
-            
             <div class="flex items-center gap-3">
                 <button onclick="window.bukaNotifAdmin()" class="relative p-2 text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 active:scale-95 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
@@ -63,6 +62,30 @@
             
             <div id="view-radar" class="h-full w-full relative overflow-hidden flex flex-col">
                 <div id="admin-map" class="absolute inset-0 w-full h-full z-0"></div>
+                
+                <div class="absolute top-4 left-4 right-4 md:left-6 md:right-auto z-[900] flex flex-col gap-3 pointer-events-none w-[calc(100%-2rem)] md:w-96">
+                    <div class="bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 flex items-center px-3 py-2 pointer-events-auto">
+                        <input type="text" id="radar-search" placeholder="Cari alamat / Paste Gmaps Link..." class="flex-1 bg-transparent border-none outline-none text-sm font-bold text-gray-700 placeholder-gray-400">
+                        <button class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></button>
+                    </div>
+
+                    <div class="flex gap-2 pointer-events-auto">
+                        <button onclick="window.togglePanel('panel-stats')" class="flex-1 bg-white/95 backdrop-blur-md border border-gray-200 shadow-sm rounded-xl py-2 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 flex items-center justify-between">Statistik ▾</button>
+                        <button onclick="window.togglePanel('panel-ekslist')" class="flex-1 bg-white/95 backdrop-blur-md border border-gray-200 shadow-sm rounded-xl py-2 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 flex items-center justify-between">Titik Ekspedisi ▾</button>
+                    </div>
+
+                    <div id="panel-stats" class="dropdown-panel bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 flex-col overflow-hidden pointer-events-auto max-h-[60vh]">
+                        <div class="grid grid-cols-2 gap-px bg-gray-100 border-b border-gray-100">
+                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-blue-50"><p class="text-[9px] font-black text-gray-400 uppercase">Driver Online</p><p id="rad-driver" class="text-lg font-black text-blue-600 leading-none mt-1">0</p></div>
+                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-yellow-50"><p class="text-[9px] font-black text-gray-400 uppercase">Order Masuk</p><p id="rad-order" class="text-lg font-black text-yellow-500 leading-none mt-1">0</p></div>
+                        </div>
+                    </div>
+
+                    <div id="panel-ekslist" class="dropdown-panel bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 flex-col overflow-hidden pointer-events-auto max-h-[50vh]">
+                        <div class="p-3 bg-gray-50 border-b border-gray-100"><p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Daftar Titik (Klik untuk menuju lokasi)</p></div>
+                        <div id="radar-eks-list" class="overflow-y-auto content-scroll flex-1 p-2 space-y-1"></div>
+                    </div>
+                </div>
             </div>
 
             <div id="view-ekspedisi" class="h-full w-full hidden relative overflow-hidden flex-col">
@@ -103,29 +126,64 @@
             </div>
 
             <div id="view-dispatch" class="w-full hidden p-4 md:p-6"><h3 class="font-black text-gray-800 text-xl">Kontrol Pesanan Dispatcher</h3></div>
+            
             <div id="view-broadcast" class="w-full hidden p-4 md:p-6"><h3 class="font-black text-gray-800 text-xl">Broadcast Pesan System</h3></div>
+            
             <div id="view-promo" class="w-full hidden p-4 md:p-6"><h3 class="font-black text-gray-800 text-xl">Buat Banner Promo</h3></div>
 
             <div id="view-pricing" class="w-full hidden p-4 md:p-6">
-                <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
-                    <h3 class="font-black text-gray-800 text-xl mb-6 border-b border-gray-100 pb-4">Konfigurasi Tarif, Berat, & Dimensi</h3>
+                <div class="max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
+                    <h3 class="font-black text-gray-800 text-xl mb-2">Konfigurasi Tarif & Atribut Barang</h3>
+                    <p class="text-xs text-gray-500 mb-6 border-b border-gray-100 pb-4">Data di bawah ini akan otomatis muncul sebagai opsi (Dropdown) di aplikasi Customer.</p>
+                    
                     <div class="space-y-6">
                         <div>
-                            <h4 class="text-sm font-black text-blue-600 mb-3 bg-blue-50 py-2 px-3 rounded-lg border border-blue-100 inline-block">1. Tarif Jarak</h4>
+                            <h4 class="text-sm font-black text-blue-600 mb-3 bg-blue-50 py-2 px-3 rounded-lg border border-blue-100 inline-block">1. Tarif Jarak Tempuh</h4>
                             <div class="flex gap-4">
-                                <div class="flex-1"><label class="text-[10px] font-bold text-gray-500 uppercase">Tarif Flat (Misal: 2 KM Pertama)</label><div class="relative mt-1"><span class="absolute left-3 top-3 text-gray-500 font-bold text-sm">Rp</span><input type="number" id="tf-base" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-4 py-3 font-bold outline-none"></div></div>
-                                <div class="flex-1"><label class="text-[10px] font-bold text-gray-500 uppercase">Tarif Per-KM Berikutnya</label><div class="relative mt-1"><span class="absolute left-3 top-3 text-gray-500 font-bold text-sm">Rp</span><input type="number" id="tf-perkm" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-4 py-3 font-bold outline-none"></div></div>
+                                <div class="flex-1">
+                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Tarif Dasar (1 KM Pertama)</label>
+                                    <div class="relative mt-1"><span class="absolute left-3 top-3 text-gray-500 font-bold text-sm">Rp</span><input type="number" id="tf-base" placeholder="5000" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-4 py-3 font-bold outline-none"></div>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Tarif Per-KM Berikutnya</label>
+                                    <div class="relative mt-1"><span class="absolute left-3 top-3 text-gray-500 font-bold text-sm">Rp</span><input type="number" id="tf-perkm" placeholder="5000" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-4 py-3 font-bold outline-none"></div>
+                                </div>
                             </div>
                         </div>
+
                         <div>
-                            <h4 class="text-sm font-black text-orange-600 mb-3 bg-orange-50 py-2 px-3 rounded-lg border border-orange-100 inline-block">2. Batas Berat & Dimensi</h4>
-                            <p class="text-xs text-gray-500 font-bold mb-3">Sistem otomatis menghitung P x L x T / 6000. Jika hasil berat asli atau dimensi melebihi batas gratis di bawah, customer dikenakan biaya tambahan.</p>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><label class="text-[10px] font-bold text-gray-500 uppercase">Batas Gratis (Berat Asli/Dimensi)</label><div class="relative mt-1"><input type="number" id="tf-maxkg" placeholder="Misal: 5" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-bold outline-none"><span class="absolute right-4 top-3 text-gray-500 font-bold text-sm">KG</span></div></div>
-                                <div><label class="text-[10px] font-bold text-gray-500 uppercase">Biaya Ekstra per KG/Volumetrik</label><div class="relative mt-1"><span class="absolute left-3 top-3 text-gray-500 font-bold text-sm">Rp</span><input type="number" id="tf-extrakg" placeholder="Misal: 2000" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-4 py-3 font-bold outline-none"></div></div>
+                            <h4 class="text-sm font-black text-orange-600 mb-3 bg-orange-50 py-2 px-3 rounded-lg border border-orange-100 inline-block">2. Kategori Berat (Pilihan Customer)</h4>
+                            <div class="grid grid-cols-2 gap-4 mb-2">
+                                <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Opsi 1 (Bebas Biaya)</label>
+                                    <input type="text" id="tf-berat-nama1" value="Ringan (Maksimal 1 KG)" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold mt-1 outline-none">
+                                    <input type="text" id="tf-berat-harga1" value="0" readonly class="w-full bg-gray-100 text-gray-400 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold mt-1 outline-none">
+                                </div>
+                                <div class="bg-orange-50 p-3 rounded-xl border border-orange-200 shadow-sm">
+                                    <label class="text-[10px] font-bold text-orange-600 uppercase">Opsi 2 (+ Biaya Tambahan)</label>
+                                    <input type="text" id="tf-berat-nama2" value="Sedang (Di atas 2 KG)" class="w-full bg-white border border-orange-200 rounded-lg px-3 py-2 text-xs font-bold mt-1 outline-none">
+                                    <div class="relative mt-1"><span class="absolute left-3 top-2 text-gray-500 font-bold text-xs">Rp</span><input type="number" id="tf-berat-harga2" placeholder="2000" class="w-full bg-white border border-orange-200 rounded-lg pl-8 pr-3 py-2 text-xs font-bold outline-none"></div>
+                                </div>
                             </div>
                         </div>
-                        <button onclick="simpanTarif()" class="w-full bg-gray-900 hover:bg-black text-white font-black py-4 rounded-xl mt-4 shadow-lg transition-colors">💾 Simpan Konfigurasi</button>
+
+                        <div>
+                            <h4 class="text-sm font-black text-green-600 mb-3 bg-green-50 py-2 px-3 rounded-lg border border-green-100 inline-block">3. Kategori Dimensi (Pilihan Customer)</h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Opsi 1 (Bebas Biaya)</label>
+                                    <input type="text" id="tf-dim-nama1" value="Kecil (Muat Ransel/Tas)" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold mt-1 outline-none">
+                                    <input type="text" id="tf-dim-harga1" value="0" readonly class="w-full bg-gray-100 text-gray-400 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold mt-1 outline-none">
+                                </div>
+                                <div class="bg-green-50 p-3 rounded-xl border border-green-200 shadow-sm">
+                                    <label class="text-[10px] font-bold text-green-600 uppercase">Opsi 2 (+ Biaya Tambahan)</label>
+                                    <input type="text" id="tf-dim-nama2" value="Besar (Lebih dari 1 Meter)" class="w-full bg-white border border-green-200 rounded-lg px-3 py-2 text-xs font-bold mt-1 outline-none">
+                                    <div class="relative mt-1"><span class="absolute left-3 top-2 text-gray-500 font-bold text-xs">Rp</span><input type="number" id="tf-dim-harga2" placeholder="15000" class="w-full bg-white border border-green-200 rounded-lg pl-8 pr-3 py-2 text-xs font-bold outline-none"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="window.simpanTarif()" class="w-full bg-gray-900 hover:bg-black text-white font-black py-4 rounded-xl mt-4 shadow-lg transition-colors">💾 Simpan & Update ke Aplikasi Customer</button>
                     </div>
                 </div>
             </div>
@@ -195,6 +253,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/js/db.js"></script>
-    <script src="/js/admin.js?v=2026_bersih"></script> 
+    <script src="/js/admin.js?v=admin_final_1"></script> 
 </body>
 </html>
