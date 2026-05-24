@@ -38,10 +38,9 @@
             <a href="#" onclick="window.switchMenu('broadcast')" id="nav-broadcast" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Broadcast Pesan</a>
 
             <p class="px-6 py-2 mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bisnis & User</p>
-            <a href="#" onclick="window.switchMenu('pricing')" id="nav-pricing" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Pengaturan Tarif</a>
-            <a href="#" onclick="window.switchMenu('radius')" id="nav-radius" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Batas Jangkauan (Radius)</a>
+            <a href="#" onclick="window.switchMenu('pricing')" id="nav-pricing" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Pengaturan Tarif & Dimensi</a>
             <a href="#" onclick="window.switchMenu('promo')" id="nav-promo" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Manajemen Promo</a>
-            <a href="#" onclick="window.switchMenu('driver')" id="nav-driver" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Data Internal Driver</a>
+            <a href="#" onclick="window.switchMenu('driver')" id="nav-driver" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Manajemen Akun Driver</a>
         </nav>
     </aside>
 
@@ -64,150 +63,131 @@
             
             <div id="view-radar" class="h-full w-full relative overflow-hidden flex flex-col">
                 <div id="admin-map" class="absolute inset-0 w-full h-full z-0"></div>
-                <div class="absolute top-4 left-4 right-4 md:left-6 md:right-auto z-[900] flex flex-col gap-3 pointer-events-none w-[calc(100%-2rem)] md:w-96">
-                    <div class="bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 flex items-center px-3 py-2 pointer-events-auto">
-                        <input type="text" id="radar-search" placeholder="Cari alamat / Paste Gmaps Link..." class="flex-1 bg-transparent border-none outline-none text-sm font-bold text-gray-700 placeholder-gray-400">
-                        <button onclick="window.cariDiRadar()" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></button>
-                    </div>
-                    <div class="flex gap-2 pointer-events-auto">
-                        <button onclick="window.togglePanel('panel-stats')" class="flex-1 bg-white/95 backdrop-blur-md border border-gray-200 shadow-sm rounded-xl py-2 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 flex items-center justify-between">Statistik ▾</button>
-                        <button onclick="window.togglePanel('panel-ekslist')" class="flex-1 bg-white/95 backdrop-blur-md border border-gray-200 shadow-sm rounded-xl py-2 px-3 text-xs font-black text-gray-700 hover:bg-gray-50 flex items-center justify-between">Titik Ekspedisi ▾</button>
-                    </div>
-
-                    <div id="panel-stats" class="dropdown-panel bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 flex-col overflow-hidden pointer-events-auto max-h-[60vh]">
-                        <div class="grid grid-cols-2 gap-px bg-gray-100 border-b border-gray-100">
-                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-blue-50"><p class="text-[9px] font-black text-gray-400 uppercase">Driver Online</p><p id="rad-driver" class="text-lg font-black text-blue-600 leading-none mt-1">0</p></div>
-                            <div class="bg-white p-3 text-center cursor-pointer hover:bg-yellow-50"><p class="text-[9px] font-black text-gray-400 uppercase">Order Masuk</p><p id="rad-order" class="text-lg font-black text-yellow-500 leading-none mt-1">0</p></div>
-                        </div>
-                    </div>
-                    <div id="panel-ekslist" class="dropdown-panel bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 flex-col overflow-hidden pointer-events-auto max-h-[50vh]">
-                        <div class="p-3 bg-gray-50 border-b border-gray-100"><p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Daftar Titik Aktif</p></div>
-                        <div id="radar-eks-list" class="overflow-y-auto content-scroll flex-1 p-2 space-y-1"></div>
-                    </div>
-                </div>
             </div>
 
             <div id="view-ekspedisi" class="h-full w-full hidden relative overflow-hidden flex-col">
                 <div id="eks-map" class="absolute inset-0 w-full h-full z-0"></div>
                 
-                <div id="sheet-ekspedisi" class="absolute bottom-0 left-0 w-full bg-white z-[4000] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] transform translate-y-[calc(100%-95px)] transition-transform duration-500 pt-3 flex flex-col h-[75vh]">
-                    <div class="cursor-pointer pb-3 px-6 flex-shrink-0" onclick="window.toggleSheetEks()">
+                <div id="sheet-ekspedisi" class="absolute bottom-0 left-0 w-full bg-white z-[4000] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] transform translate-y-[calc(100%-85px)] transition-transform duration-500 pt-3 flex flex-col h-[75vh]">
+                    <div class="cursor-pointer pb-4 px-6 flex-shrink-0" onclick="window.toggleSheetEks()">
                         <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
                         <h3 class="font-black text-gray-800 text-lg text-center">Manajemen Titik Ekspedisi</h3>
                     </div>
 
-                    <div class="flex-1 overflow-y-auto content-scroll p-6 pt-2 grid grid-cols-1 md:grid-cols-2 gap-6 pb-32 mb-10">
-                        
+                    <div class="flex-1 overflow-y-auto content-scroll p-6 pt-0 grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
                         <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl space-y-3 h-fit">
-                            <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest border-b border-gray-200 pb-1 mb-2">TAP / KLIK PETA UNTUK SET TITIK</p>
+                            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200 pb-1 mb-2">Pilih Cara Input Titik</p>
                             <input type="text" id="f-eks-nama" placeholder="Nama Cabang (Cth: J&T Pusat)" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold outline-none mb-1">
                             
-                            <div class="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-                                <p class="text-[10px] font-bold text-blue-600 mb-1">CARA 1: Paste Link Google Maps</p>
-                                <input type="text" id="f-eks-link" placeholder="https://maps.app.goo.gl/..." class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs outline-none">
-                            </div>
-
                             <div class="bg-orange-50/50 p-3 rounded-lg border border-orange-100">
-                                <p class="text-[10px] font-bold text-orange-600 mb-1">CARA 2: Tap Map / Ketik Koordinat</p>
+                                <p class="text-[10px] font-bold text-orange-600 mb-1">TAP MAP / KETIK KOORDINAT</p>
                                 <div class="flex gap-2">
                                     <input type="text" id="f-eks-lat" readonly placeholder="Lat (-6.xxx)" class="w-1/2 bg-gray-100 border border-gray-300 rounded-lg px-2 py-2 text-xs outline-none font-bold text-gray-500">
                                     <input type="text" id="f-eks-lng" readonly placeholder="Lng (107.xxx)" class="w-1/2 bg-gray-100 border border-gray-300 rounded-lg px-2 py-2 text-xs outline-none font-bold text-gray-500">
                                 </div>
                             </div>
-                            <button onclick="window.simpanEkspedisi()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-2 shadow-md">Simpan Titik ke Database</button>
+                            <button onclick="window.simpanEkspedisi()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg mt-2 shadow-md transition-colors">Simpan Titik ke Database</button>
                         </div>
-                        
                         <div class="border border-gray-200 rounded-xl flex flex-col bg-white shadow-sm" style="max-height: 250px;">
                             <div class="overflow-y-auto content-scroll w-full h-full rounded-xl">
                                 <table class="w-full text-left relative">
                                     <thead class="bg-gray-100 text-[10px] text-gray-500 uppercase font-black sticky top-0 z-10 shadow-sm">
-                                        <tr>
-                                            <th class="p-3">Daftar Gerai Aktif</th>
-                                            <th class="p-3 text-center w-20">Aksi</th>
-                                        </tr>
+                                        <tr><th class="p-3">Daftar Gerai Aktif</th><th class="p-3 text-center w-20">Aksi</th></tr>
                                     </thead>
-                                    <tbody id="table-ekspedisi" class="divide-y divide-gray-100 text-xs font-bold text-gray-700">
-                                        </tbody>
+                                    <tbody id="table-ekspedisi" class="divide-y divide-gray-100 text-xs font-bold text-gray-700"></tbody>
                                 </table>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
 
-            <div id="view-radius" class="h-full w-full hidden relative overflow-hidden flex-col">
-                <div id="radius-map" class="absolute inset-0 w-full h-full z-0"></div>
-                
-                <div id="sheet-radius" class="absolute bottom-0 left-0 w-full bg-white z-[4000] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] transform translate-y-[calc(100%-95px)] transition-transform duration-500 pt-3 flex flex-col max-h-[60vh]">
-                    <div class="cursor-pointer pb-3 px-6 flex-shrink-0" onclick="window.toggleSheetRadius()">
-                        <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
-                        <h3 class="font-black text-gray-800 text-lg text-center">Geofencing Operasional</h3>
-                    </div>
-                    
-                    <div class="flex-1 overflow-y-auto content-scroll px-6 pb-24 mb-6">
-                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-200 pb-1 mb-3">Atur Jangkauan Operasional (Radius)</p>
-                        
-                        <div class="grid grid-cols-2 gap-3 mb-3">
-                            <div><label class="text-[10px] font-bold text-gray-500 uppercase">Lat Pusat</label><input type="text" id="rad-lat" readonly class="w-full mt-1 bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-600 outline-none"></div>
-                            <div><label class="text-[10px] font-bold text-gray-500 uppercase">Lng Pusat</label><input type="text" id="rad-lng" readonly class="w-full mt-1 bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-600 outline-none"></div>
-                        </div>
+            <div id="view-dispatch" class="w-full hidden p-4 md:p-6"><h3 class="font-black text-gray-800 text-xl">Kontrol Pesanan Dispatcher</h3></div>
+            <div id="view-broadcast" class="w-full hidden p-4 md:p-6"><h3 class="font-black text-gray-800 text-xl">Broadcast Pesan System</h3></div>
+            <div id="view-promo" class="w-full hidden p-4 md:p-6"><h3 class="font-black text-gray-800 text-xl">Buat Banner Promo</h3></div>
+
+            <div id="view-pricing" class="w-full hidden p-4 md:p-6">
+                <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
+                    <h3 class="font-black text-gray-800 text-xl mb-6 border-b border-gray-100 pb-4">Konfigurasi Tarif, Berat, & Dimensi</h3>
+                    <div class="space-y-6">
                         <div>
-                            <label class="text-[10px] font-bold text-gray-500 uppercase">Maksimal Radius (KM)</label>
-                            <div class="relative mt-1">
-                                <input type="number" id="rad-km" oninput="window.updateRadiusCircle()" class="w-full bg-blue-50 border border-blue-300 text-blue-700 rounded-xl px-4 py-3 font-black outline-none text-lg" value="3">
-                                <span class="absolute right-4 top-3 text-blue-600 font-black text-sm">Kilometer</span>
+                            <h4 class="text-sm font-black text-blue-600 mb-3 bg-blue-50 py-2 px-3 rounded-lg border border-blue-100 inline-block">1. Tarif Jarak</h4>
+                            <div class="flex gap-4">
+                                <div class="flex-1"><label class="text-[10px] font-bold text-gray-500 uppercase">Tarif Flat (Misal: 2 KM Pertama)</label><div class="relative mt-1"><span class="absolute left-3 top-3 text-gray-500 font-bold text-sm">Rp</span><input type="number" id="tf-base" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-4 py-3 font-bold outline-none"></div></div>
+                                <div class="flex-1"><label class="text-[10px] font-bold text-gray-500 uppercase">Tarif Per-KM Berikutnya</label><div class="relative mt-1"><span class="absolute left-3 top-3 text-gray-500 font-bold text-sm">Rp</span><input type="number" id="tf-perkm" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-4 py-3 font-bold outline-none"></div></div>
                             </div>
                         </div>
-                        <button onclick="window.simpanRadius()" class="w-full bg-gray-900 active:bg-black text-white font-black py-4 rounded-xl mt-5 shadow-xl transition-transform active:scale-95 flex items-center justify-center gap-2">
-                            💾 Simpan Area Pembatasan
-                        </button>
+                        <div>
+                            <h4 class="text-sm font-black text-orange-600 mb-3 bg-orange-50 py-2 px-3 rounded-lg border border-orange-100 inline-block">2. Batas Berat & Dimensi</h4>
+                            <p class="text-xs text-gray-500 font-bold mb-3">Sistem otomatis menghitung P x L x T / 6000. Jika hasil berat asli atau dimensi melebihi batas gratis di bawah, customer dikenakan biaya tambahan.</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="text-[10px] font-bold text-gray-500 uppercase">Batas Gratis (Berat Asli/Dimensi)</label><div class="relative mt-1"><input type="number" id="tf-maxkg" placeholder="Misal: 5" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-bold outline-none"><span class="absolute right-4 top-3 text-gray-500 font-bold text-sm">KG</span></div></div>
+                                <div><label class="text-[10px] font-bold text-gray-500 uppercase">Biaya Ekstra per KG/Volumetrik</label><div class="relative mt-1"><span class="absolute left-3 top-3 text-gray-500 font-bold text-sm">Rp</span><input type="number" id="tf-extrakg" placeholder="Misal: 2000" class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-9 pr-4 py-3 font-bold outline-none"></div></div>
+                            </div>
+                        </div>
+                        <button onclick="simpanTarif()" class="w-full bg-gray-900 hover:bg-black text-white font-black py-4 rounded-xl mt-4 shadow-lg transition-colors">💾 Simpan Konfigurasi</button>
                     </div>
                 </div>
             </div>
 
-            <div id="view-dispatch" class="w-full hidden p-4 md:p-6 pb-24">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="font-black text-gray-800 text-xl mb-2">Dispatcher Order</h3>
-                    <p class="text-sm text-gray-500 font-bold">Daftar pesanan masuk akan tampil di sini (Dalam Pengembangan).</p>
+            <div id="view-driver" class="w-full hidden p-4 md:p-6 pb-10">
+                <div class="flex justify-between items-center mb-6">
+                    <div><h3 class="font-black text-gray-800 text-xl">Database Akun Driver</h3><p class="text-xs text-gray-500 mt-1 hidden md:block">Buat dan atur kredensial login mitra driver internal.</p></div>
+                    <button onclick="window.bukaModalDriver()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm text-xs transition-all border border-blue-700">+ Buat Akun Baru</button>
                 </div>
-            </div>
-            <div id="view-broadcast" class="w-full hidden p-4 md:p-6 pb-24">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="font-black text-gray-800 text-xl mb-2">Broadcast Pesan</h3>
-                    <p class="text-sm text-gray-500 font-bold">Kirim pesan massal ke driver (Dalam Pengembangan).</p>
-                </div>
-            </div>
-            <div id="view-pricing" class="w-full hidden p-4 md:p-6 pb-24">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="font-black text-gray-800 text-xl mb-2">Pengaturan Tarif</h3>
-                    <p class="text-sm text-gray-500 font-bold">Setting harga ongkir per KM (Dalam Pengembangan).</p>
-                </div>
-            </div>
-            <div id="view-promo" class="w-full hidden p-4 md:p-6 pb-24">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="font-black text-gray-800 text-xl mb-2">Manajemen Promo</h3>
-                    <p class="text-sm text-gray-500 font-bold">List voucher diskon aktif (Dalam Pengembangan).</p>
-                </div>
-            </div>
-            <div id="view-driver" class="w-full hidden p-4 md:p-6 pb-24">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="font-black text-gray-800 text-xl mb-2">Data Internal Driver</h3>
-                    <p class="text-sm text-gray-500 font-bold">List database mitra pengemudi (Dalam Pengembangan).</p>
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-x-auto">
+                    <table class="w-full text-left min-w-[600px]">
+                        <thead class="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase font-black">
+                            <tr><th class="p-4 pl-6">ID & Profil</th><th class="p-4">Username & Pass</th><th class="p-4">Kendaraan</th><th class="p-4">Status</th><th class="p-4 text-center">Aksi</th></tr>
+                        </thead>
+                        <tbody id="table-driver-crud" class="divide-y divide-gray-100 text-sm">
+                            <tr><td colspan="5" class="p-4 text-center text-gray-400 font-bold text-xs">Belum ada akun driver dibuat.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
         </div>
     </main>
 
-    <div id="modal-notif-admin" class="fixed inset-0 z-[10000] bg-gray-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div id="modal-notif-admin" class="fixed inset-0 z-[10000] bg-gray-900/70 backdrop-blur-sm hidden items-center justify-center p-4 transition-opacity">
         <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
             <div class="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50">
-                <h3 class="font-black text-lg text-gray-800">Feedback Customer</h3>
-                <button onclick="window.tutupModal('modal-notif-admin')" class="bg-gray-200 p-2 hover:bg-gray-300 rounded-full font-bold text-gray-600">✖</button>
+                <h3 class="font-black text-lg text-gray-800">Pusat Notifikasi</h3>
+                <button onclick="window.tutupModal('modal-notif-admin')" class="bg-gray-200 p-2 hover:bg-gray-300 rounded-full font-bold text-gray-600 transition-colors">✖</button>
             </div>
-            <div class="p-6 overflow-y-auto flex-1 space-y-3" id="admin-notif-list">
-                <p class="text-center text-sm font-bold text-gray-400 mt-4">Belum ada feedback yang masuk.</p>
+            <div class="p-6 overflow-y-auto flex-1 space-y-3">
+                <p class="text-center text-sm font-bold text-gray-400 mt-4">Belum ada aktivitas baru.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-form-driver" class="fixed inset-0 z-[10000] bg-gray-900/70 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+            <div class="flex justify-between items-center p-5 border-b border-gray-100 bg-blue-600 text-white">
+                <h3 class="font-black text-lg">Buat Akun Driver Internal</h3>
+                <button onclick="window.tutupModal('modal-form-driver')" class="text-white hover:text-gray-200 font-bold">✖</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-1">1. Kredensial Akses</h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-xs font-bold text-gray-600">Username</label><input type="text" id="d-user" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 font-bold outline-none" placeholder="driver01"></div>
+                    <div><label class="text-xs font-bold text-gray-600">Password</label><input type="text" id="d-pass" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 font-bold outline-none" placeholder="Rahasia123"></div>
+                </div>
+
+                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-1 pt-2">2. Data Diri</h4>
+                <div><label class="text-xs font-bold text-gray-600">Nama Lengkap</label><input type="text" id="d-nama" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 font-bold outline-none"></div>
+                <div><label class="text-xs font-bold text-gray-600">No. WhatsApp (Aktif)</label><input type="number" id="d-wa" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 font-bold outline-none"></div>
+
+                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-1 pt-2">3. Kendaraan</h4>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="col-span-1"><label class="text-xs font-bold text-gray-600">Jenis</label><select id="d-tipe" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 font-bold outline-none"><option value="Motor">Motor</option><option value="Mobil">Mobil Pickup</option></select></div>
+                    <div class="col-span-1"><label class="text-xs font-bold text-gray-600">No. Polisi</label><input type="text" id="d-nopol" placeholder="D 1234 XY" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-2 py-2 font-bold outline-none uppercase"></div>
+                </div>
+            </div>
+            <div class="p-5 border-t border-gray-100 bg-gray-50 flex gap-3">
+                <button onclick="window.tutupModal('modal-form-driver')" class="flex-1 bg-white border border-gray-300 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-100">Batal</button>
+                <button onclick="window.simpanAkunDriver()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-blue-700">Terbitkan Akun</button>
             </div>
         </div>
     </div>
@@ -215,6 +195,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/js/db.js"></script>
-    <script src="/js/admin.js?v=2026"></script> 
+    <script src="/js/admin.js?v=2026_bersih"></script> 
 </body>
 </html>
