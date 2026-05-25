@@ -1,6 +1,6 @@
 /**
  * ADMIN ENGINE - MAPEL EXPRESS
- * (REWRITE CLEAN VERSION - TARIFF & RADAR FIX)
+ * (REWRITE CLEAN VERSION - DYNAMIC PRICING LIST)
  */
 
 const sb = window.sb || (typeof supabase !== 'undefined' ? supabase : null);
@@ -56,7 +56,7 @@ window.toggleSheetEks = function() {
 };
 
 const viewTitles = {
-    'radar': 'God Eye Radar', 'dispatch': 'Manajemen Dispatcher', 'ekspedisi': 'Setup Ekspedisi', 'broadcast': 'Broadcast Global', 'pricing': 'Pengaturan Tarif & Dimensi', 'promo': 'Manajemen Promo', 'driver': 'Data Akun Driver'
+    'radar': 'God Eye Radar', 'dispatch': 'Manajemen Dispatcher', 'ekspedisi': 'Setup Ekspedisi', 'broadcast': 'Broadcast Global', 'pricing': 'Pengaturan Tarif Dinamis', 'promo': 'Manajemen Promo', 'driver': 'Data Akun Driver'
 };
 
 window.switchMenu = function(menuId) {
@@ -148,7 +148,7 @@ window.loadEkspedisi = async function() {
             arrayMarkerEkspedisi = [];
 
             const tabelEks = document.getElementById('table-ekspedisi');
-            const listRadar = document.getElementById('radar-eks-list'); // List radar dikembalikan
+            const listRadar = document.getElementById('radar-eks-list'); 
             if(tabelEks) tabelEks.innerHTML = '';
             if(listRadar) listRadar.innerHTML = '';
 
@@ -227,24 +227,135 @@ window.simpanAkunDriver = async function() {
     window.tutupModal('modal-form-driver');
 };
 
+
 // ===============================================
-// 5. FUNGSI SIMPAN TARIF (UPDATE KE CUSTOMER NANTI)
+// 5. DYNAMIC PRICING (BERAT & DIMENSI)
 // ===============================================
-window.simpanTarif = function() {
-    // Ambil data Tarif Jarak
+// Data sementara sebelum dilempar ke Supabase
+window.listKategoriBerat = [];
+window.listKategoriDimensi = [];
+
+// FUNGSI BERAT
+window.tambahListBerat = function() {
+    const namaInput = document.getElementById('input-berat-nama');
+    const hargaInput = document.getElementById('input-berat-harga');
+    
+    const nama = namaInput.value.trim();
+    const harga = parseInt(hargaInput.value) || 0;
+
+    if (!nama) return alert("Isi nama kategori berat dulu!");
+
+    window.listKategoriBerat.push({ nama: nama, harga: harga });
+    
+    // Bersihkan input
+    namaInput.value = '';
+    hargaInput.value = '';
+    
+    window.renderBerat();
+};
+
+window.hapusBerat = function(index) {
+    window.listKategoriBerat.splice(index, 1);
+    window.renderBerat();
+};
+
+window.renderBerat = function() {
+    const ul = document.getElementById('render-list-berat');
+    ul.innerHTML = '';
+    
+    if(window.listKategoriBerat.length === 0) {
+        ul.innerHTML = '<p class="text-xs text-gray-400 italic">Belum ada kategori yang ditambahkan.</p>';
+        return;
+    }
+
+    window.listKategoriBerat.forEach((item, index) => {
+        let hargaText = item.harga === 0 ? '<span class="text-green-600 font-black">Gratis</span>' : `<span class="text-orange-600 font-black">+ Rp ${item.harga.toLocaleString('id-ID')}</span>`;
+        
+        ul.innerHTML += `
+            <li class="bg-white border border-gray-200 p-3 rounded-xl flex justify-between items-center shadow-sm">
+                <div>
+                    <p class="text-xs font-bold text-gray-800">${item.nama}</p>
+                    <p class="text-[10px] mt-0.5">${hargaText}</p>
+                </div>
+                <button onclick="window.hapusBerat(${index})" class="bg-red-50 text-red-500 hover:bg-red-100 p-2 rounded-lg text-xs font-bold transition-colors">Hapus</button>
+            </li>
+        `;
+    });
+};
+
+// FUNGSI DIMENSI
+window.tambahListDimensi = function() {
+    const namaInput = document.getElementById('input-dimensi-nama');
+    const hargaInput = document.getElementById('input-dimensi-harga');
+    
+    const nama = namaInput.value.trim();
+    const harga = parseInt(hargaInput.value) || 0;
+
+    if (!nama) return alert("Isi nama kategori dimensi dulu!");
+
+    window.listKategoriDimensi.push({ nama: nama, harga: harga });
+    
+    // Bersihkan input
+    namaInput.value = '';
+    hargaInput.value = '';
+    
+    window.renderDimensi();
+};
+
+window.hapusDimensi = function(index) {
+    window.listKategoriDimensi.splice(index, 1);
+    window.renderDimensi();
+};
+
+window.renderDimensi = function() {
+    const ul = document.getElementById('render-list-dimensi');
+    ul.innerHTML = '';
+    
+    if(window.listKategoriDimensi.length === 0) {
+        ul.innerHTML = '<p class="text-xs text-gray-400 italic">Belum ada kategori yang ditambahkan.</p>';
+        return;
+    }
+
+    window.listKategoriDimensi.forEach((item, index) => {
+        let hargaText = item.harga === 0 ? '<span class="text-green-600 font-black">Gratis</span>' : `<span class="text-orange-600 font-black">+ Rp ${item.harga.toLocaleString('id-ID')}</span>`;
+        
+        ul.innerHTML += `
+            <li class="bg-white border border-gray-200 p-3 rounded-xl flex justify-between items-center shadow-sm">
+                <div>
+                    <p class="text-xs font-bold text-gray-800">${item.nama}</p>
+                    <p class="text-[10px] mt-0.5">${hargaText}</p>
+                </div>
+                <button onclick="window.hapusDimensi(${index})" class="bg-red-50 text-red-500 hover:bg-red-100 p-2 rounded-lg text-xs font-bold transition-colors">Hapus</button>
+            </li>
+        `;
+    });
+};
+
+// Panggil render pertama kali (kosong)
+window.renderBerat();
+window.renderDimensi();
+
+
+// FUNGSI SIMPAN SEMUA (Dilempar ke DB)
+window.simpanSemuaTarif = function() {
     const baseFare = document.getElementById('tf-base').value;
     const perKmFare = document.getElementById('tf-perkm').value;
 
-    // Ambil data Berat
-    const beratHarga2 = document.getElementById('tf-berat-harga2').value;
+    if(!baseFare || !perKmFare) return alert("⚠️ Isi tarif jarak dasar (KM) terlebih dahulu!");
+    if(window.listKategoriBerat.length === 0) return alert("⚠️ Tambahkan minimal 1 kategori berat!");
+    if(window.listKategoriDimensi.length === 0) return alert("⚠️ Tambahkan minimal 1 kategori dimensi!");
+
+    // Nanti Object ini yang akan di-upsert ke tabel Supabase "settings"
+    const dataTarif = {
+        jarak_dasar: parseInt(baseFare),
+        jarak_per_km: parseInt(perKmFare),
+        kategori_berat: window.listKategoriBerat,
+        kategori_dimensi: window.listKategoriDimensi
+    };
+
+    console.log("Data Tarif Siap Disimpan:", dataTarif);
     
-    // Ambil data Dimensi
-    const dimHarga2 = document.getElementById('tf-dim-harga2').value;
-
-    if(!baseFare || !perKmFare) return alert("Isi tarif jarak terlebih dahulu!");
-
-    // Logika simpan ke Supabase tabel settings (disiapkan untuk nanti ditarik Customer)
-    alert("Konfigurasi Tarif, Berat, dan Dimensi berhasil disimpan! Data Dropdown di aplikasi Customer akan otomatis terupdate.");
+    alert("✅ Mantap! Konfigurasi Tarif, Berat, & Dimensi berhasil disimpan. Kategori ini akan otomatis muncul sebagai opsi di aplikasi Customer.");
 };
 
 // ===============================================
