@@ -201,7 +201,7 @@
 
             <div id="view-driver" class="w-full hidden p-4 md:p-6 pb-10">
                 <div class="flex justify-between items-center mb-6">
-                    <div><h3 class="font-black text-gray-800 text-xl">Database Akun Driver</h3><p class="text-xs text-gray-500 mt-1 hidden md:block">Buat dan atur kredensial login mitra driver internal.</p></div>
+                    <div><h3 class="font-black text-gray-800 text-xl">Database Akun Driver</h3><p class="text-xs text-gray-500 mt-1 hidden md:block">Manajemen kredensial login mitra driver.</p></div>
                     <button onclick="window.bukaModalDriver()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm text-xs transition-all border border-blue-700">+ Buat Akun Baru</button>
                 </div>
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-x-auto">
@@ -210,7 +210,7 @@
                             <tr><th class="p-4 pl-6">ID & Profil</th><th class="p-4">Username & Pass</th><th class="p-4">Kendaraan</th><th class="p-4">Status</th><th class="p-4 text-center">Aksi</th></tr>
                         </thead>
                         <tbody id="table-driver-crud" class="divide-y divide-gray-100 text-sm">
-                            <tr><td colspan="5" class="p-4 text-center text-gray-400 font-bold text-xs">Belum ada akun driver dibuat.</td></tr>
+                            <tr><td colspan="5" class="p-4 text-center text-gray-400 font-bold text-xs">Loading data...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -238,6 +238,20 @@
                 <button onclick="window.tutupModal('modal-form-driver')" class="text-white hover:text-gray-200 font-bold">✖</button>
             </div>
             <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                
+                <div class="flex items-center gap-4 mb-2 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <div class="w-16 h-16 rounded-full bg-white border-2 border-dashed border-blue-400 flex items-center justify-center overflow-hidden relative shadow-sm">
+                        <img id="d-foto-preview" class="hidden w-full h-full object-cover">
+                        <span id="d-foto-placeholder" class="text-2xl text-blue-400 pointer-events-none">📸</span>
+                        <input type="file" id="d-foto-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="window.previewFotoDriver(event)">
+                    </div>
+                    <div>
+                        <p class="text-sm font-black text-gray-700">Foto Profil Driver</p>
+                        <p class="text-[10px] font-bold text-gray-500 mt-0.5">Ketuk ikon kamera untuk memilih foto.</p>
+                        <input type="hidden" id="d-foto-base64">
+                    </div>
+                </div>
+
                 <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-1">1. Kredensial Akses</h4>
                 <div class="grid grid-cols-2 gap-4">
                     <div><label class="text-xs font-bold text-gray-600">Username</label><input type="text" id="d-user" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 font-bold outline-none" placeholder="driver01"></div>
@@ -255,8 +269,8 @@
                 </div>
             </div>
             <div class="p-5 border-t border-gray-100 bg-gray-50 flex gap-3">
-                <button onclick="window.tutupModal('modal-form-driver')" class="flex-1 bg-white border border-gray-300 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-100">Batal</button>
-                <button onclick="window.simpanAkunDriver()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-blue-700">Terbitkan Akun</button>
+                <button onclick="window.tutupModal('modal-form-driver')" class="flex-1 bg-white border border-gray-300 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-100 transition-colors">Batal</button>
+                <button onclick="window.simpanAkunDriver()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-blue-700 transition-colors">Simpan & Terbitkan</button>
             </div>
         </div>
     </div>
@@ -264,6 +278,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/js/db.js"></script>
-    <script src="/js/admin.js?v=final_dynamic_pricing"></script> 
+    <script src="/js/admin.js?v=final_driver_fix"></script> 
 </body>
 </html>
