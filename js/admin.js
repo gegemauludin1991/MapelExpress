@@ -105,7 +105,7 @@ function getIconEkspedisi(namaCabang) {
 
     if (nama.includes('jne')) iconFile = 'jne.png';
     // FIX J&T: Pastikan file di folder bernama jnt.png karena simbol & error di web server
-    else if (nama.includes('j&t') || nama.includes('jnt') || nama.includes('j & t')) iconFile = 'jnt.png';
+    else if (nama.includes('j&t') || nama.includes('j&t') || nama.includes('j & t')) iconFile = 'j&t.png';
     else if (nama.includes('sicepat') || nama.includes('si cepat')) iconFile = 'sicepat.png';
     else if (nama.includes('shopee') || nama.includes('spx')) iconFile = 'spx.png';
     else if (nama.includes('ninja')) { iconFile = 'ninja.png'; bgColor = '#dc2626'; } 
