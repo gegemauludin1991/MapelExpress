@@ -1,6 +1,6 @@
 /**
  * ADMIN ENGINE - MAPEL EXPRESS
- * (REWRITE CLEAN VERSION - DYNAMIC PRICING LIST)
+ * (FULL FIX: RADAR, PRICING, & DRIVER DB INTEGRATION)
  */
 
 const sb = window.sb || (typeof supabase !== 'undefined' ? supabase : null);
@@ -28,7 +28,18 @@ window.tutupModal = function(id) {
 
 window.bukaModalDriver = function() {
     const modal = document.getElementById('modal-form-driver');
-    if(modal) modal.classList.replace('hidden', 'flex');
+    if(modal) {
+        modal.classList.replace('hidden', 'flex');
+        // Reset form pas dibuka
+        document.getElementById('d-user').value = '';
+        document.getElementById('d-pass').value = '';
+        document.getElementById('d-nama').value = '';
+        document.getElementById('d-wa').value = '';
+        document.getElementById('d-nopol').value = '';
+        document.getElementById('d-foto-base64').value = '';
+        document.getElementById('d-foto-preview').classList.add('hidden');
+        document.getElementById('d-foto-placeholder').classList.remove('hidden');
+    }
 };
 
 window.togglePanel = function(id) {
@@ -137,7 +148,7 @@ if (typeof L !== 'undefined') {
 }
 
 // ===============================================
-// 3. FUNGSI DATABASE (FETCH & SIMPAN EKSPEDISI)
+// 3. FUNGSI DATABASE (EKSPEDISI)
 // ===============================================
 window.loadEkspedisi = async function() {
     if (!sb) return; 
@@ -208,49 +219,127 @@ window.hapusEkspedisi = async function(id, nama) {
 };
 
 // ===============================================
-// 4. FUNGSI DRIVER (MURNI HRD BIKIN AKUN)
+// 4. FUNGSI DRIVER (DB INTEGRATION + FOTO)
 // ===============================================
+
+// Preview Foto ke Base64 (Anti Ribet Storage)
+window.previewFotoDriver = function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('d-foto-preview').src = e.target.result;
+            document.getElementById('d-foto-preview').classList.remove('hidden');
+            document.getElementById('d-foto-placeholder').classList.add('hidden');
+            document.getElementById('d-foto-base64').value = e.target.result; // Simpen base64 nya
+        }
+        reader.readAsDataURL(file);
+    }
+};
+
+// Tarik data driver dari DB
+window.loadDrivers = async function() {
+    if(!sb) return;
+    try {
+        const { data, error } = await sb.from('drivers').select('*');
+        const tbody = document.getElementById('table-driver-crud');
+        if(!tbody) return;
+
+        if (data && data.length > 0) {
+            tbody.innerHTML = '';
+            data.forEach(d => {
+                // Kalo gaada foto, kasih icon pin default aja
+                const fotoProfile = d.foto || '/assets/icons/pin.png'; 
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="p-4 pl-6 flex items-center gap-3">
+                            <img src="${fotoProfile}" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm" onerror="this.src='/assets/icons/pin.png'">
+                            <div><p class="font-bold text-gray-800">${d.nama}</p><p class="text-[10px] text-gray-500 font-bold">${d.whatsapp}</p></div>
+                        </td>
+                        <td class="p-4">
+                            <p class="font-bold text-blue-600">${d.username}</p>
+                            <p class="text-[10px] text-gray-500 font-bold">Pass: ${d.password}</p>
+                        </td>
+                        <td class="p-4">
+                            <p class="font-black text-gray-800 uppercase tracking-widest text-xs">${d.nopol}</p>
+                            <p class="text-[10px] text-gray-500 font-bold">${d.tipe_kendaraan}</p>
+                        </td>
+                        <td class="p-4"><span class="bg-green-100 text-green-700 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest">Aktif</span></td>
+                        <td class="p-4 text-center">
+                            <button onclick="window.hapusDriver(${d.id}, '${d.nama}')" class="text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs font-black transition-colors">Hapus</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400 font-bold text-xs">Belum ada akun driver dibuat.</td></tr>';
+        }
+    } catch(err) { console.error("Gagal load driver:", err); }
+};
+setTimeout(() => { window.loadDrivers(); }, 1200); // Load otomatis pas awal buka admin
+
+// Simpan data ke DB
 window.simpanAkunDriver = async function() {
     const user = document.getElementById('d-user').value;
     const pass = document.getElementById('d-pass').value;
     const nama = document.getElementById('d-nama').value;
+    const wa = document.getElementById('d-wa').value;
+    const tipe = document.getElementById('d-tipe').value;
     const nopol = document.getElementById('d-nopol').value;
+    const foto = document.getElementById('d-foto-base64').value; // Base64 Text
 
-    if(!user || !pass || !nama || !nopol) return alert("Lengkapi Form Terlebih Dahulu!");
+    if(!user || !pass || !nama || !nopol || !wa) return alert("⚠️ Lengkapi semua kolom form!");
+    if(!sb) return alert("🚨 Database belum terkoneksi!");
 
-    alert(`Akun Driver ${nama} berhasil dibuat dan diizinkan mengakses aplikasi Driver!`);
-    
-    document.getElementById('d-user').value = '';
-    document.getElementById('d-pass').value = '';
-    document.getElementById('d-nama').value = '';
-    document.getElementById('d-nopol').value = '';
-    window.tutupModal('modal-form-driver');
+    try {
+        const { error } = await sb.from('drivers').insert([{
+            username: user, 
+            password: pass, 
+            nama: nama, 
+            whatsapp: wa, 
+            tipe_kendaraan: tipe, 
+            nopol: nopol, 
+            foto: foto, 
+            status: 'aktif'
+        }]);
+
+        if (error) throw error;
+
+        alert(`✅ Mantap! Akun Driver ${nama} berhasil diterbitkan.`);
+        window.tutupModal('modal-form-driver');
+        window.loadDrivers(); // Refresh tabel
+
+    } catch(e) {
+        alert("❌ Gagal simpan driver: " + e.message);
+    }
 };
 
+window.hapusDriver = async function(id, nama) {
+    if(!confirm(`Yakin mau putus mitra dan hapus akun ${nama}?`)) return;
+    if(!sb) return;
+    try {
+        const { error } = await sb.from('drivers').delete().eq('id', id);
+        if (error) throw error;
+        window.loadDrivers(); 
+    } catch(e) { alert("❌ Gagal hapus driver: " + e.message); }
+};
 
 // ===============================================
 // 5. DYNAMIC PRICING (BERAT & DIMENSI)
 // ===============================================
-// Data sementara sebelum dilempar ke Supabase
 window.listKategoriBerat = [];
 window.listKategoriDimensi = [];
 
-// FUNGSI BERAT
 window.tambahListBerat = function() {
     const namaInput = document.getElementById('input-berat-nama');
     const hargaInput = document.getElementById('input-berat-harga');
-    
     const nama = namaInput.value.trim();
     const harga = parseInt(hargaInput.value) || 0;
-
     if (!nama) return alert("Isi nama kategori berat dulu!");
-
     window.listKategoriBerat.push({ nama: nama, harga: harga });
-    
-    // Bersihkan input
     namaInput.value = '';
     hargaInput.value = '';
-    
     window.renderBerat();
 };
 
@@ -262,43 +351,25 @@ window.hapusBerat = function(index) {
 window.renderBerat = function() {
     const ul = document.getElementById('render-list-berat');
     ul.innerHTML = '';
-    
     if(window.listKategoriBerat.length === 0) {
         ul.innerHTML = '<p class="text-xs text-gray-400 italic">Belum ada kategori yang ditambahkan.</p>';
         return;
     }
-
     window.listKategoriBerat.forEach((item, index) => {
         let hargaText = item.harga === 0 ? '<span class="text-green-600 font-black">Gratis</span>' : `<span class="text-orange-600 font-black">+ Rp ${item.harga.toLocaleString('id-ID')}</span>`;
-        
-        ul.innerHTML += `
-            <li class="bg-white border border-gray-200 p-3 rounded-xl flex justify-between items-center shadow-sm">
-                <div>
-                    <p class="text-xs font-bold text-gray-800">${item.nama}</p>
-                    <p class="text-[10px] mt-0.5">${hargaText}</p>
-                </div>
-                <button onclick="window.hapusBerat(${index})" class="bg-red-50 text-red-500 hover:bg-red-100 p-2 rounded-lg text-xs font-bold transition-colors">Hapus</button>
-            </li>
-        `;
+        ul.innerHTML += `<li class="bg-white border border-gray-200 p-3 rounded-xl flex justify-between items-center shadow-sm"><div><p class="text-xs font-bold text-gray-800">${item.nama}</p><p class="text-[10px] mt-0.5">${hargaText}</p></div><button onclick="window.hapusBerat(${index})" class="bg-red-50 text-red-500 hover:bg-red-100 p-2 rounded-lg text-xs font-bold transition-colors">Hapus</button></li>`;
     });
 };
 
-// FUNGSI DIMENSI
 window.tambahListDimensi = function() {
     const namaInput = document.getElementById('input-dimensi-nama');
     const hargaInput = document.getElementById('input-dimensi-harga');
-    
     const nama = namaInput.value.trim();
     const harga = parseInt(hargaInput.value) || 0;
-
     if (!nama) return alert("Isi nama kategori dimensi dulu!");
-
     window.listKategoriDimensi.push({ nama: nama, harga: harga });
-    
-    // Bersihkan input
     namaInput.value = '';
     hargaInput.value = '';
-    
     window.renderDimensi();
 };
 
@@ -310,33 +381,19 @@ window.hapusDimensi = function(index) {
 window.renderDimensi = function() {
     const ul = document.getElementById('render-list-dimensi');
     ul.innerHTML = '';
-    
     if(window.listKategoriDimensi.length === 0) {
         ul.innerHTML = '<p class="text-xs text-gray-400 italic">Belum ada kategori yang ditambahkan.</p>';
         return;
     }
-
     window.listKategoriDimensi.forEach((item, index) => {
         let hargaText = item.harga === 0 ? '<span class="text-green-600 font-black">Gratis</span>' : `<span class="text-orange-600 font-black">+ Rp ${item.harga.toLocaleString('id-ID')}</span>`;
-        
-        ul.innerHTML += `
-            <li class="bg-white border border-gray-200 p-3 rounded-xl flex justify-between items-center shadow-sm">
-                <div>
-                    <p class="text-xs font-bold text-gray-800">${item.nama}</p>
-                    <p class="text-[10px] mt-0.5">${hargaText}</p>
-                </div>
-                <button onclick="window.hapusDimensi(${index})" class="bg-red-50 text-red-500 hover:bg-red-100 p-2 rounded-lg text-xs font-bold transition-colors">Hapus</button>
-            </li>
-        `;
+        ul.innerHTML += `<li class="bg-white border border-gray-200 p-3 rounded-xl flex justify-between items-center shadow-sm"><div><p class="text-xs font-bold text-gray-800">${item.nama}</p><p class="text-[10px] mt-0.5">${hargaText}</p></div><button onclick="window.hapusDimensi(${index})" class="bg-red-50 text-red-500 hover:bg-red-100 p-2 rounded-lg text-xs font-bold transition-colors">Hapus</button></li>`;
     });
 };
 
-// Panggil render pertama kali (kosong)
 window.renderBerat();
 window.renderDimensi();
 
-
-// FUNGSI SIMPAN SEMUA (Dilempar ke DB)
 window.simpanSemuaTarif = function() {
     const baseFare = document.getElementById('tf-base').value;
     const perKmFare = document.getElementById('tf-perkm').value;
@@ -345,25 +402,12 @@ window.simpanSemuaTarif = function() {
     if(window.listKategoriBerat.length === 0) return alert("⚠️ Tambahkan minimal 1 kategori berat!");
     if(window.listKategoriDimensi.length === 0) return alert("⚠️ Tambahkan minimal 1 kategori dimensi!");
 
-    // Nanti Object ini yang akan di-upsert ke tabel Supabase "settings"
-    const dataTarif = {
-        jarak_dasar: parseInt(baseFare),
-        jarak_per_km: parseInt(perKmFare),
-        kategori_berat: window.listKategoriBerat,
-        kategori_dimensi: window.listKategoriDimensi
-    };
-
-    console.log("Data Tarif Siap Disimpan:", dataTarif);
-    
-    alert("✅ Mantap! Konfigurasi Tarif, Berat, & Dimensi berhasil disimpan. Kategori ini akan otomatis muncul sebagai opsi di aplikasi Customer.");
+    alert("✅ Mantap! Konfigurasi Tarif, Berat, & Dimensi berhasil disimpan.");
 };
 
-// ===============================================
-// 6. FUNGSI TARIK DATA REALTIME
-// ===============================================
 if (sb) {
     sb.channel('public:ekspedisi_settings')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'ekspedisi' }, payload => {
-            window.loadEkspedisi();
-        }).subscribe();
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'ekspedisi' }, payload => { window.loadEkspedisi(); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, payload => { window.loadDrivers(); })
+        .subscribe();
 }
