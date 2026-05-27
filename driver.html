@@ -12,7 +12,8 @@
 
     <style>
         body { margin: 0; padding: 0; background-color: #f3f4f6; }
-        #map { height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; z-index: 0; }
+        /* Tambahan touch-action: none biar map nggak nge-bug pas digeser di HP */
+        #map { height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; z-index: 0; touch-action: none; }
         .leaflet-control-zoom, .leaflet-routing-container { display: none !important; }
         
         .toggle-checkbox:checked { right: 0; border-color: #10B981; }
@@ -138,16 +139,16 @@
 
                 <div>
                     <label class="text-[10px] font-bold text-gray-400 uppercase">Nama Lengkap</label>
-                    <input type="text" id="set-nama" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-blue-500" />
+                    <input type="text" id="set-nama" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-blue-500" readonly />
                 </div>
                 <div>
                     <label class="text-[10px] font-bold text-gray-400 uppercase">No. WhatsApp</label>
-                    <input type="number" id="set-wa" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-blue-500" />
+                    <input type="number" id="set-wa" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-blue-500" readonly />
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="text-[10px] font-bold text-gray-400 uppercase">No. Polisi</label>
-                        <input type="text" id="set-nopol" placeholder="D 1234 ABC" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-blue-500" />
+                        <input type="text" id="set-nopol" placeholder="D 1234 ABC" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:border-blue-500" readonly />
                     </div>
                     <div>
                         <label class="text-[10px] font-bold text-gray-400 uppercase">Warna Kendaraan</label>
@@ -156,14 +157,14 @@
                 </div>
                 <div>
                     <label class="text-[10px] font-bold text-gray-400 uppercase">Jenis Kendaraan</label>
-                    <select id="set-jenis" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none appearance-none">
+                    <select id="set-jenis" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none appearance-none" disabled>
                         <option value="Motor">Motor (Reguler)</option>
                         <option value="Mobil">Mobil (Cargo)</option>
                     </select>
                 </div>
                 
-                <button id="btn-save-profile" class="mt-2 w-full bg-blue-700 text-white font-bold py-3.5 rounded-2xl shadow-lg active:scale-95 transition-transform">
-                    Simpan Perubahan
+                <button onclick="window.location.replace('index.html'); localStorage.removeItem('mapel_driver_session');" id="btn-logout" class="mt-2 w-full bg-red-50 text-red-600 font-bold py-3.5 rounded-2xl shadow-sm active:scale-95 transition-transform border border-red-100">
+                    LOGOUT AKUN
                 </button>
             </div>
         </div>
@@ -285,13 +286,12 @@
         </div>
     </div>
 
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
     <script src="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script src="/js/MapEngine.js?v=2"></script> 
-    
     <script src="/js/db.js?v=2"></script>
     <script src="/js/driver.js?v=2"></script> 
 </body>
