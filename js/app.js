@@ -1,7 +1,11 @@
 /**
- * MAIN APP CONTROLLER - SISI CUSTOMER (PRODUCTION READY)
- * Fix: Integrasi Tarif Admin, Dropdown Otomatis, Profil Google & GPS Akurat
+ * MAIN APP CONTROLLER - SISI CUSTOMER (FIXED DATABASE CONNECTION)
  */
+
+// 1. INISIALISASI SUPABASE LANGSUNG DI APP.JS (ANTI GAGAL)
+const supabaseUrl = 'https://nahgibyegdeioquryfde.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
+const sb = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
 
 const OFFICE = { lat: -6.977414, lng: 107.555359, wa: "6281234567890", alamat: "Jl. Raya Margaasih, Kab. Bandung" };
 const myMap = typeof DynamicMap !== 'undefined' ? new DynamicMap('map', OFFICE.lat, OFFICE.lng, 14) : null;
@@ -12,7 +16,7 @@ if (myMap) {
     L.marker([OFFICE.lat, OFFICE.lng], { icon: officeIcon }).addTo(myMap.map).bindPopup(`
         <div class="font-sans text-center w-48 whitespace-normal">
             <h3 class="font-bold text-blue-800 text-[13px] border-b border-gray-200 pb-1 mb-1">MapelExpress</h3>
-            <p class="text-[10px] text-gray-600 leading-tight">Komplek CCM No 105, Desa Mekarrahayu, Kec Margaasih, Kab Bandung</p>
+            <p class="text-[10px] text-gray-600 leading-tight">Komplek CCM No 105, Kab Bandung</p>
         </div>
     `);
 }
@@ -44,47 +48,49 @@ window.currentJarakKm = 0;
 window.totalOngkir = 0;
 
 // ==========================================
-// 1. INISIALISASI DATA (SUPABASE FETCHING)
+// 2. INISIALISASI DATA DARI SUPABASE
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
-    if (window.supabaseClient) {
-        try {
-            // 1. CEK SESI & PROFIL (FALLBACK KE GOOGLE NAME)
-            const { data: { session } } = await window.supabaseClient.auth.getSession();
-            if (session) {
-                const { data: profile } = await window.supabaseClient.from('profiles').select('*').eq('id', session.user.id).single();
-                
-                // Cerdas: Tarik nama dari Google kalau nama di Profile kosong
-                const googleName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email.split('@')[0];
-                const finalName = profile?.full_name || googleName;
+    if (!sb) return alert("Sistem gagal terhubung ke Database Supabase!");
 
-                window.currentUserProfile = profile || { id: session.user.id, full_name: finalName, whatsapp: '' };
-                
-                // Isi otomatis di Form Profil Modal
-                document.getElementById('profile-name-input').value = finalName;
-                document.getElementById('profile-email-text').innerText = session.user.email;
-                document.getElementById('profile-wa-input').value = profile?.whatsapp || '';
+    try {
+        // A. CEK SESI & PROFIL (Narik Nama Asli / Email Google)
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+            const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+            
+            // Logika pintar: Tarik nama Google kalau profile.full_name kosong
+            const googleName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email.split('@')[0];
+            const finalName = profile?.full_name || googleName;
 
-                // Sapaan Header
-                document.getElementById('header-greeting').innerText = `Hai, ${finalName.split(' ')[0]}! 👋`;
-            }
+            window.currentUserProfile = profile || { id: session.user.id, full_name: finalName, whatsapp: '' };
+            
+            // Isi ke form UI
+            document.getElementById('profile-name-input').value = finalName;
+            document.getElementById('profile-email-text').innerText = session.user.email;
+            document.getElementById('profile-wa-input').value = profile?.whatsapp || '';
+            document.getElementById('header-greeting').innerText = `Hai, ${finalName.split(' ')[0]}! 👋`;
+        } else {
+            // Kalau belum login, lempar ke index.html
+            window.location.replace('index.html');
+        }
 
-            // 2. TARIK DATA EKSPEDISI REAL
-            const { data: eksData } = await window.supabaseClient.from('ekspedisi').select('*');
-            if (eksData) {
-                window.ekspedisiList = eksData;
-                renderPinEkspedisi();
-            }
+        // B. TARIK DATA EKSPEDISI REAL-TIME
+        const { data: eksData } = await sb.from('ekspedisi').select('*');
+        if (eksData) {
+            window.ekspedisiList = eksData;
+            renderPinEkspedisi(); // Nampilin pin di map
+        }
 
-            // 3. TARIK PENGATURAN TARIF (DYNAMIC PRICING)
-            const { data: setttingData } = await window.supabaseClient.from('settings').select('*').eq('id', 1).single();
-            if (setttingData && setttingData.data) {
-                window.appSettings = setttingData.data;
-                ubahInputJadiDropdown(window.appSettings); // Sulap form HTML jadi Dropdown!
-            }
+        // C. TARIK PENGATURAN TARIF (DYNAMIC PRICING)
+        const { data: setttingData } = await sb.from('settings').select('*').eq('id', 1).single();
+        if (setttingData && setttingData.data) {
+            window.appSettings = setttingData.data;
+            ubahInputJadiDropdown(window.appSettings); // Sulap form HTML jadi Dropdown!
+            window.hitungTotalOngkir();
+        }
 
-        } catch(e) { console.error("Gagal load data awal: ", e); }
-    }
+    } catch(e) { console.error("Gagal load data awal: ", e); }
 
     const btnNotif = document.getElementById('btn-notif-customer');
     const btnProfile = document.getElementById('btn-profile');
@@ -92,67 +98,92 @@ document.addEventListener("DOMContentLoaded", async () => {
         btnNotif.onclick = () => {
             renderCustomerNotifs();
             window.showModal('modal-cust-notif');
-            const dot = document.getElementById('cust-notif-dot');
-            if(dot) dot.classList.add('hidden');
         };
     }
     if (btnProfile) btnProfile.onclick = () => window.showModal('modal-cust-profile');
 });
 
 // ==========================================
-// 2. LOGIC TARIF DINAMIS & UI DROPDOWN
+// 3. LOGIC TARIF DINAMIS & UBAH UI JADI DROPDOWN
 // ==========================================
-
-// Fungsi ini sengaja nyari input 'form-berat' & 'form-dimensi' di HTML lu,
-// trus dihapus dan diganti pake elemen <select> (Dropdown) dari data Supabase Admin.
 function ubahInputJadiDropdown(settings) {
     const elBerat = document.getElementById('form-berat');
     const elDimensi = document.getElementById('form-dimensi');
-    if(!elBerat || !elDimensi) return;
 
-    const wadahBerat = elBerat.parentNode;
-    const wadahDimensi = elDimensi.parentNode;
+    // Mengganti Input Berat jadi Select (Aman dari ngerusak UI)
+    if(elBerat && elBerat.tagName === 'INPUT') {
+        const selBerat = document.createElement('select');
+        selBerat.id = 'form-berat';
+        selBerat.className = 'w-full text-[12px] font-semibold outline-none bg-transparent cursor-pointer text-gray-800';
+        selBerat.onchange = window.hitungTotalOngkir;
+        
+        let optBerat = `<option value="0" data-label="-">Pilih Kategori Berat</option>`;
+        settings.kategori_berat.forEach(b => {
+            optBerat += `<option value="${b.harga}" data-label="${b.nama}">${b.nama} ${b.harga > 0 ? '(+Rp '+b.harga.toLocaleString('id-ID')+')' : ''}</option>`;
+        });
+        selBerat.innerHTML = optBerat;
+        
+        // Hapus tulisan "KG" bawaan HTML biar rapi
+        const spanKg = elBerat.nextElementSibling;
+        if(spanKg && spanKg.tagName === 'SPAN') spanKg.remove();
+        
+        elBerat.replaceWith(selBerat);
+    }
 
-    // Render Dropdown Berat
-    let selectBerat = `<select id="form-berat" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold text-xs outline-none focus:border-blue-500" onchange="window.hitungTotalOngkir()">`;
-    if(settings.kategori_berat.length === 0) selectBerat += `<option value="0">Default (Gratis)</option>`;
-    settings.kategori_berat.forEach(b => { selectBerat += `<option value="${b.harga}" data-label="${b.nama}">${b.nama} ${b.harga > 0 ? '(+Rp '+b.harga+')' : ''}</option>`; });
-    selectBerat += `</select>`;
-    wadahBerat.innerHTML = `<label class="text-[10px] font-bold text-gray-500 uppercase">Kategori Berat</label>` + selectBerat;
-
-    // Render Dropdown Dimensi
-    let selectDimensi = `<select id="form-dimensi" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-bold text-xs outline-none focus:border-blue-500" onchange="window.hitungTotalOngkir()">`;
-    if(settings.kategori_dimensi.length === 0) selectDimensi += `<option value="0">Default (Gratis)</option>`;
-    settings.kategori_dimensi.forEach(d => { selectDimensi += `<option value="${d.harga}" data-label="${d.nama}">${d.nama} ${d.harga > 0 ? '(+Rp '+d.harga+')' : ''}</option>`; });
-    selectDimensi += `</select>`;
-    wadahDimensi.innerHTML = `<label class="text-[10px] font-bold text-gray-500 uppercase">Dimensi Barang</label>` + selectDimensi;
+    // Mengganti Input Dimensi jadi Select
+    if(elDimensi && elDimensi.tagName === 'INPUT') {
+        const selDimensi = document.createElement('select');
+        selDimensi.id = 'form-dimensi';
+        selDimensi.className = 'w-full text-[12px] font-semibold outline-none bg-transparent cursor-pointer text-gray-800';
+        selDimensi.onchange = window.hitungTotalOngkir;
+        
+        let optDim = `<option value="0" data-label="-">Pilih Dimensi (Ukuran)</option>`;
+        settings.kategori_dimensi.forEach(d => {
+            optDim += `<option value="${d.harga}" data-label="${d.nama}">${d.nama} ${d.harga > 0 ? '(+Rp '+d.harga.toLocaleString('id-ID')+')' : ''}</option>`;
+        });
+        selDimensi.innerHTML = optDim;
+        elDimensi.replaceWith(selDimensi);
+    }
 }
 
 window.hitungTotalOngkir = function() {
-    if(!window.appSettings || window.currentJarakKm === 0) return;
+    if(!window.appSettings) return;
     
     let baseFare = window.appSettings.jarak_dasar || 5000;
     let perKmFare = window.appSettings.jarak_per_km || 5000;
     
     // Logika Jarak: 1 KM pertama ikut Tarif Dasar, sisa KM dikali Tarif per KM
     let extraKm = Math.max(0, window.currentJarakKm - 1); 
-    let ongkirJarak = baseFare + (extraKm * perKmFare);
+    
+    // Hitung jarak (jika belum ada titik, anggap 0)
+    let ongkirJarak = window.currentJarakKm > 0 ? (baseFare + (extraKm * perKmFare)) : 0;
 
     // Ambil nilai dari Dropdown yang baru kita buat
-    const valBerat = parseInt(document.getElementById('form-berat')?.value) || 0;
-    const valDimensi = parseInt(document.getElementById('form-dimensi')?.value) || 0;
+    const selBerat = document.getElementById('form-berat');
+    const selDimensi = document.getElementById('form-dimensi');
+    
+    const valBerat = parseInt(selBerat?.value) || 0;
+    const valDimensi = parseInt(selDimensi?.value) || 0;
 
     window.totalOngkir = ongkirJarak + valBerat + valDimensi;
 
-    // Update Text Tombol Order
+    // Update Text Tombol & Label Harga UI
     const btnPesan = document.getElementById('btn-pesan-kurir');
-    if(btnPesan && !btnPesan.disabled) {
-        btnPesan.innerHTML = `Order (Rp ${window.totalOngkir.toLocaleString('id-ID')}) <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>`;
+    const labelHargaBesar = document.querySelector('.text-xl.font-black.text-blue-800.leading-none');
+
+    // Hanya ubah tulisan jika harga > 0 dan tombol sedang aktif
+    if(window.totalOngkir > 0) {
+        if(labelHargaBesar) labelHargaBesar.innerText = `Rp ${window.totalOngkir.toLocaleString('id-ID')}`;
+        if(btnPesan && !btnPesan.disabled) {
+            btnPesan.innerHTML = `Order (Rp ${window.totalOngkir.toLocaleString('id-ID')}) <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>`;
+        }
+    } else {
+        if(labelHargaBesar) labelHargaBesar.innerText = `Rp -`;
     }
 }
 
 // ==========================================
-// 3. LOGIC PROFIL 
+// 4. LOGIC PROFIL & MODAL
 // ==========================================
 window.simpanProfilCustomer = async () => {
     const btn = document.getElementById('btn-save-profile');
@@ -164,8 +195,8 @@ window.simpanProfilCustomer = async () => {
     btn.innerText = "Menyimpan...";
     btn.disabled = true;
 
-    if (window.supabaseClient && window.currentUserProfile) {
-        const { error } = await window.supabaseClient.from('profiles').upsert({
+    if (sb && window.currentUserProfile) {
+        const { error } = await sb.from('profiles').upsert({
             id: window.currentUserProfile.id,
             full_name: inputNama,
             whatsapp: inputWa,
@@ -182,8 +213,14 @@ window.simpanProfilCustomer = async () => {
             window.closeAllModals();
         }
     }
-    btn.innerText = "Simpan Profil";
+    btn.innerText = "Simpan Perubahan";
     btn.disabled = false;
+};
+
+window.handleLogout = async () => {
+    if(!confirm("Yakin mau logout?")) return;
+    if(sb) await sb.auth.signOut();
+    window.location.replace('index.html');
 };
 
 window.showModal = (id) => {
@@ -234,151 +271,7 @@ function renderCustomerNotifs() {
 }
 
 // ==========================================
-// 4. LOGIC ORDER LANGSUNG KE SUPABASE
-// ==========================================
-function getBtnOrderHTML(type) {
-    if(type === 'loading') {
-        return `Memproses... <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
-    } else {
-        return `Order (Rp ${window.totalOngkir.toLocaleString('id-ID')}) <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>`;
-    }
-}
-
-document.getElementById('btn-pesan-kurir').onclick = async () => {
-    if (!pickupMarker || !targetDestMarker) return alert("Titik lokasi belum lengkap!");
-    
-    // Validasi WA
-    if(!window.currentUserProfile?.whatsapp) {
-        alert("Kamu wajib melengkapi No WhatsApp di Menu Profil sebelum bisa memesan kurir!");
-        return window.showModal('modal-cust-profile');
-    }
-
-    const btnPesan = document.getElementById('btn-pesan-kurir');
-    btnPesan.innerHTML = getBtnOrderHTML('loading');
-    btnPesan.className = "bg-gray-800 text-white text-[13px] font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center gap-2 pointer-events-none shadow-md"; 
-    
-    // Dapetin Text Murni dari Dropdown buat ditaro di Database Order
-    const selBerat = document.getElementById('form-berat');
-    const selDimensi = document.getElementById('form-dimensi');
-    const textBerat = selBerat ? selBerat.options[selBerat.selectedIndex].getAttribute('data-label') || '-' : '-';
-    const textDimensi = selDimensi ? selDimensi.options[selDimensi.selectedIndex].getAttribute('data-label') || '-' : '-';
-
-    const orderId = "ORD-" + Math.floor(Math.random() * 90000);
-    const orderDataJSON = {
-        jenisLayanan: currentJenisLayanan,
-        namaBarang: document.getElementById('form-nama').value || 'Paket Reguler',
-        keterangan: document.getElementById('form-keterangan').value || '-',
-        berat: textBerat,
-        dimensi: textDimensi,
-        jarakKm: window.currentJarakKm,
-        totalOngkir: window.totalOngkir,
-        alamatJemput: document.getElementById('input-jemput').value,
-        jemputLat: pickupMarker.getLatLng().lat, jemputLng: pickupMarker.getLatLng().lng,
-        alamatTujuan: document.getElementById('input-tujuan').value,
-        tujuanLat: targetDestMarker.getLatLng().lat, tujuanLng: targetDestMarker.getLatLng().lng,
-        customerName: window.currentUserProfile?.full_name || 'Customer',
-        customerWa: window.currentUserProfile?.whatsapp || '',
-        tracking: [{ time: getWaktuSekarang(), status: 'Pesanan Dibuat, Mencari Driver...' }]
-    };
-    
-    window.currentOrderData = { id: orderId, ...orderDataJSON };
-
-    // INSERT KE TABEL ORDERS
-    if(window.supabaseClient) {
-        const { error } = await window.supabaseClient.from('orders').insert({
-            id: orderId,
-            status: 'pending',
-            data: orderDataJSON
-        });
-
-        if(error) {
-            alert("Gagal membuat orderan: " + error.message);
-            btnPesan.innerHTML = getBtnOrderHTML('normal');
-            btnPesan.className = "bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 pointer-events-auto cursor-pointer shadow-lg active:scale-95";
-        } else {
-            isOrderActive = true;
-            document.getElementById('section-form-order').innerHTML = `
-                <div class="bg-blue-50 border border-blue-100 p-5 rounded-3xl mb-3 shadow-sm text-center">
-                    <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm animate-pulse"><span class="text-xl">🛵</span></div>
-                    <h4 class="font-black text-blue-800">Sedang Mencari Kurir...</h4>
-                    <p class="text-xs text-gray-500 mt-1">Mohon tunggu sebentar, sistem sedang mencarikan mitra terdekat untuk menjemput paketmu.</p>
-                </div>
-            `;
-        }
-    }
-};
-
-// ==========================================
-// 5. LISTENER REALTIME DARI db.js
-// ==========================================
-if(window.appEvents) {
-    window.appEvents.on('order_status_changed', (orderData) => {
-        if(!isOrderActive || orderData.id !== window.currentOrderData?.id) return;
-
-        if(orderData.status === 'accepted') {
-            const driver = orderData.data.driver; 
-            document.getElementById('section-form-order').innerHTML = `
-                <div class="bg-white border p-5 rounded-3xl mb-3 shadow-lg">
-                    <p id="status-jemput-teks" class="text-[11px] font-black text-blue-600 uppercase mb-3 animate-pulse">Kurir Menuju Lokasi Jemput</p>
-                    <div class="flex items-center gap-4">
-                        <img src="${driver?.photo || '/assets/icons/kurir.png'}" class="w-14 h-14 rounded-full border border-gray-200 object-cover">
-                        <div class="flex-1">
-                            <h4 class="font-black text-gray-800">${driver?.name || 'Mitra Driver'}</h4>
-                            <p class="text-xs text-gray-500 font-bold">${driver?.nopol || '-'}</p>
-                        </div>
-                    </div>
-                    <a href="https://wa.me/${driver?.wa || OFFICE.wa}" target="_blank" class="mt-4 flex items-center justify-center gap-2 w-full bg-[#25D366] text-white font-bold py-3 rounded-xl text-sm active:scale-95 transition-transform shadow-md">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg> Hubungi Driver
-                    </a>
-                </div>
-            `;
-        } 
-        else if (orderData.status === 'picked_up') {
-            const statusText = document.getElementById('status-jemput-teks');
-            if(statusText) {
-                statusText.innerText = "Paket Dalam Perjalanan ke Tujuan";
-                statusText.classList.replace('text-blue-600', 'text-orange-500');
-            }
-        }
-        else if (orderData.status === 'completed') {
-            isOrderActive = false;
-            if (liveDriverMarker && myMap) myMap.map.removeLayer(liveDriverMarker);
-            
-            customerNotifs.unshift({ 
-                title: "Paket Selesai Diantar 🎉", 
-                time: getWaktuSekarang(),
-                alamatTujuan: window.currentOrderData.alamatTujuan 
-            });
-            localStorage.setItem('mapel_customer_notif', JSON.stringify(customerNotifs));
-
-            const successHtml = `
-                <div id="modal-success-order" class="fixed inset-0 z-[100000] flex items-center justify-center bg-gray-900 bg-opacity-70 backdrop-blur-sm p-5">
-                    <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center shadow-2xl transform transition-transform duration-300 scale-100">
-                        <div class="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
-                        </div>
-                        <h2 class="text-2xl font-black text-gray-800 mb-1">Paket Terkirim!</h2>
-                        <p class="text-[12px] text-gray-500 leading-relaxed px-2">Yey! Kurir sudah berhasil mengantarkan paket kamu ke lokasi tujuan dengan aman.</p>
-                        <button onclick="location.reload()" class="w-full mt-6 bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(34,197,94,0.3)] transition-all">Tutup & Pesan Lagi</button>
-                    </div>
-                </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', successHtml);
-        }
-    });
-
-    window.appEvents.on('update_driver_map', (data) => {
-        if (!isOrderActive || !myMap) return; 
-        if (!liveDriverMarker) {
-            liveDriverMarker = L.marker([data.lat, data.lng], { icon: kurirIcon, zIndexOffset: 99999 }).addTo(myMap.map);
-        } else {
-            liveDriverMarker.setLatLng([data.lat, data.lng]);
-        }
-    });
-}
-
-// ==========================================
-// 6. MAP & GPS LOGIC (PICKING, ROUTING)
+// 5. MAP & GPS LOGIC (PICKING, ROUTING)
 // ==========================================
 async function getAddressFromCoords(lat, lng) {
     try {
@@ -535,18 +428,18 @@ window.swapLokasi = () => {
         { lat: targetDestMarker.getLatLng().lat, lng: targetDestMarker.getLatLng().lng }
     ], (hasil) => {
         document.getElementById('label-jarak-rute').innerText = `Jarak: ${hasil.jarakKm} KM`;
-        window.currentJarakKm = hasil.jarakKm; // Simpan jarak
-        window.hitungTotalOngkir(); // Re-kalkulasi
+        window.currentJarakKm = hasil.jarakKm; 
+        window.hitungTotalOngkir(); 
     });
 };
 
 // ==========================================
-// 7. EKSPEDISI & RUTING LOGIC
+// 6. EKSPEDISI & RUTING LOGIC
 // ==========================================
 function getEkspedisiLogo(nama) {
     if (!nama) return null;
     const n = nama.toLowerCase();
-    const ts = new Date().getTime(); // Anti-Cache
+    const ts = new Date().getTime(); 
     if (n.includes('j&t') || n.includes('jnt')) return `/assets/icons/j%26t.png?v=${ts}`;
     if (n.includes('jne')) return `/assets/icons/jne.png?v=${ts}`;
     if (n.includes('ninja')) return `/assets/icons/ninja.png?v=${ts}`;
@@ -621,15 +514,14 @@ window.buatRuteKeTujuan = (targetLat, targetLng, namaTujuan) => {
     const pickupPos = pickupMarker.getLatLng();
     myMap.drawRoute([{ lat: pickupPos.lat, lng: pickupPos.lng }, { lat: targetLat, lng: targetLng }], (hasil) => {
         document.getElementById('label-jarak-rute').innerText = `Jarak: ${hasil.jarakKm} KM`;
-        window.currentJarakKm = hasil.jarakKm; // SIMPAN JARAK LALU HITUNG ONGKIR
-        window.hitungTotalOngkir();
+        window.currentJarakKm = hasil.jarakKm; // SIMPAN JARAK
+        window.hitungTotalOngkir(); // RE-KALKULASI ONGKIR BERDASARKAN JARAK BARU
         
         document.getElementById('section-pilih-ekspedisi').classList.add('hidden');
         document.getElementById('section-form-order').classList.remove('hidden');
         
         const btnPesan = document.getElementById('btn-pesan-kurir');
         btnPesan.disabled = false;
-        btnPesan.innerHTML = getBtnOrderHTML('normal');
         btnPesan.className = "bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 pointer-events-auto cursor-pointer shadow-lg active:scale-95";
     });
     
@@ -645,6 +537,7 @@ window.batalPilihEkspedisi = () => {
     if(targetDestMarker) myMap.map.removeLayer(targetDestMarker);
     if(myMap.routingControl) myMap.map.removeControl(myMap.routingControl);
     window.currentJarakKm = 0;
+    window.hitungTotalOngkir();
 };
 
 // UI Handling Bottom Sheet
@@ -660,4 +553,150 @@ if (sheetHandle) {
             isSheetOpen = !isSheetOpen;
         }
     };
+}
+
+// ==========================================
+// 7. ORDER INSERT LOGIC & REALTIME
+// ==========================================
+function getBtnOrderHTML(type) {
+    if(type === 'loading') {
+        return `Memproses... <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+    } else {
+        return `Order (Rp ${window.totalOngkir.toLocaleString('id-ID')}) <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>`;
+    }
+}
+
+document.getElementById('btn-pesan-kurir').onclick = async () => {
+    if (!pickupMarker || !targetDestMarker) return alert("Titik lokasi belum lengkap!");
+    
+    // Validasi No WA
+    if(!window.currentUserProfile?.whatsapp) {
+        alert("Kamu wajib melengkapi No WhatsApp di Menu Profil sebelum bisa memesan kurir!");
+        return window.showModal('modal-cust-profile');
+    }
+
+    const btnPesan = document.getElementById('btn-pesan-kurir');
+    btnPesan.innerHTML = getBtnOrderHTML('loading');
+    btnPesan.className = "bg-gray-800 text-white text-[13px] font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center gap-2 pointer-events-none shadow-md"; 
+    
+    // Mengambil Nama Label dari Dropdown
+    const selBerat = document.getElementById('form-berat');
+    const selDimensi = document.getElementById('form-dimensi');
+    const textBerat = selBerat ? selBerat.options[selBerat.selectedIndex].getAttribute('data-label') || '-' : '-';
+    const textDimensi = selDimensi ? selDimensi.options[selDimensi.selectedIndex].getAttribute('data-label') || '-' : '-';
+
+    const orderId = "ORD-" + Math.floor(Math.random() * 90000);
+    const orderDataJSON = {
+        jenisLayanan: currentJenisLayanan,
+        namaBarang: document.getElementById('form-nama').value || 'Paket Reguler',
+        keterangan: document.getElementById('form-keterangan').value || '-',
+        berat: textBerat,
+        dimensi: textDimensi,
+        jarakKm: window.currentJarakKm,
+        totalOngkir: window.totalOngkir,
+        alamatJemput: document.getElementById('input-jemput').value,
+        jemputLat: pickupMarker.getLatLng().lat, jemputLng: pickupMarker.getLatLng().lng,
+        alamatTujuan: document.getElementById('input-tujuan').value,
+        tujuanLat: targetDestMarker.getLatLng().lat, tujuanLng: targetDestMarker.getLatLng().lng,
+        customerName: window.currentUserProfile?.full_name || 'Customer',
+        customerWa: window.currentUserProfile?.whatsapp || '',
+        tracking: [{ time: getWaktuSekarang(), status: 'Pesanan Dibuat, Mencari Driver...' }]
+    };
+    
+    window.currentOrderData = { id: orderId, ...orderDataJSON };
+
+    // Insert to DB
+    if(sb) {
+        const { error } = await sb.from('orders').insert({
+            id: orderId,
+            status: 'pending',
+            data: orderDataJSON
+        });
+
+        if(error) {
+            alert("Gagal membuat orderan: " + error.message);
+            btnPesan.innerHTML = getBtnOrderHTML('normal');
+            btnPesan.className = "bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 pointer-events-auto cursor-pointer shadow-lg active:scale-95";
+        } else {
+            isOrderActive = true;
+            document.getElementById('section-form-order').innerHTML = `
+                <div class="bg-blue-50 border border-blue-100 p-5 rounded-3xl mb-3 shadow-sm text-center">
+                    <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm animate-pulse"><span class="text-xl">🛵</span></div>
+                    <h4 class="font-black text-blue-800">Sedang Mencari Kurir...</h4>
+                    <p class="text-xs text-gray-500 mt-1">Mohon tunggu sebentar, sistem sedang mencarikan mitra terdekat untuk menjemput paketmu.</p>
+                </div>
+            `;
+            // Hide the total distance/price section
+            document.querySelector('.flex.items-center.justify-between.pt-2.border-t').style.display = 'none';
+        }
+    }
+};
+
+// ==========================================
+// 8. LISTENER REALTIME UPDATE DRIVER
+// ==========================================
+if(window.appEvents) {
+    window.appEvents.on('order_status_changed', (orderData) => {
+        if(!isOrderActive || orderData.id !== window.currentOrderData?.id) return;
+
+        if(orderData.status === 'accepted') {
+            const driver = orderData.data.driver; 
+            document.getElementById('section-form-order').innerHTML = `
+                <div class="bg-white border p-5 rounded-3xl mb-3 shadow-lg">
+                    <p id="status-jemput-teks" class="text-[11px] font-black text-blue-600 uppercase mb-3 animate-pulse">Kurir Menuju Lokasi Jemput</p>
+                    <div class="flex items-center gap-4">
+                        <img src="${driver?.photo || '/assets/icons/kurir.png'}" class="w-14 h-14 rounded-full border border-gray-200 object-cover">
+                        <div class="flex-1">
+                            <h4 class="font-black text-gray-800">${driver?.name || 'Mitra Driver'}</h4>
+                            <p class="text-xs text-gray-500 font-bold">${driver?.nopol || '-'}</p>
+                        </div>
+                    </div>
+                    <a href="https://wa.me/${driver?.wa || OFFICE.wa}" target="_blank" class="mt-4 flex items-center justify-center gap-2 w-full bg-[#25D366] text-white font-bold py-3 rounded-xl text-sm active:scale-95 transition-transform shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg> Hubungi Driver
+                    </a>
+                </div>
+            `;
+        } 
+        else if (orderData.status === 'picked_up') {
+            const statusText = document.getElementById('status-jemput-teks');
+            if(statusText) {
+                statusText.innerText = "Paket Dalam Perjalanan ke Tujuan";
+                statusText.classList.replace('text-blue-600', 'text-orange-500');
+            }
+        }
+        else if (orderData.status === 'completed') {
+            isOrderActive = false;
+            if (liveDriverMarker && myMap) myMap.map.removeLayer(liveDriverMarker);
+            
+            customerNotifs.unshift({ 
+                title: "Paket Selesai Diantar 🎉", 
+                time: getWaktuSekarang(),
+                alamatTujuan: window.currentOrderData.alamatTujuan 
+            });
+            localStorage.setItem('mapel_customer_notif', JSON.stringify(customerNotifs));
+
+            const successHtml = `
+                <div id="modal-success-order" class="fixed inset-0 z-[100000] flex items-center justify-center bg-gray-900 bg-opacity-70 backdrop-blur-sm p-5">
+                    <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center shadow-2xl">
+                        <div class="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                        <h2 class="text-2xl font-black text-gray-800 mb-1">Paket Terkirim!</h2>
+                        <p class="text-[12px] text-gray-500 leading-relaxed px-2">Yey! Kurir sudah berhasil mengantarkan paket kamu ke lokasi tujuan dengan aman.</p>
+                        <button onclick="location.reload()" class="w-full mt-6 bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(34,197,94,0.3)] transition-all">Pesan Lagi</button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', successHtml);
+        }
+    });
+
+    window.appEvents.on('update_driver_map', (data) => {
+        if (!isOrderActive || !myMap) return; 
+        if (!liveDriverMarker) {
+            liveDriverMarker = L.marker([data.lat, data.lng], { icon: kurirIcon, zIndexOffset: 99999 }).addTo(myMap.map);
+        } else {
+            liveDriverMarker.setLatLng([data.lat, data.lng]);
+        }
+    });
 }
