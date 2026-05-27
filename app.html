@@ -126,7 +126,11 @@
             </div>
 
             <div class="flex flex-col gap-2.5 mb-4">
-                <input type="text" id="form-nama" placeholder="Nama Pengirim / Toko" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[12px] font-semibold outline-none focus:border-blue-500 transition-colors" />
+                
+                <div class="flex gap-2">
+                    <input type="text" id="form-nama" placeholder="Nama Penerima" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[12px] font-semibold outline-none focus:border-blue-500 transition-colors" />
+                    <input type="number" id="form-wa-penerima" placeholder="No. WA Penerima" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[12px] font-semibold outline-none focus:border-blue-500 transition-colors" />
+                </div>
                 
                 <div class="flex gap-2">
                     <div class="flex-1 bg-gray-50 flex items-center border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-blue-500 transition-colors">
@@ -254,12 +258,12 @@
         </div>
     </div>
 
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-       <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-      <script src="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
-      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-     <script src="/js/MapEngine.js?v=4"></script> 
-     <script src="/js/db.js?v=4"></script>
-     <script src="/js/app.js?v=4"></script> 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <script src="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/js/MapEngine.js?v=4"></script> 
+    <script src="/js/db.js?v=4"></script>
+    <script src="/js/app.js?v=4"></script> 
 </body>
 </html>
