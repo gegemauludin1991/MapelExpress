@@ -1,6 +1,6 @@
 /**
  * ADMIN ENGINE - MAPEL EXPRESS
- * (ALL FEATURES V1: RADAR, DISPATCHER, BROADCAST, PROMO, PRICING, DRIVER)
+ * (ALL FEATURES V2: FULLY FUNCTIONAL DB INTEGRATION & FIX J&T URL ENCODING)
  */
 
 const sb = window.sb || (typeof supabase !== 'undefined' ? supabase : null);
@@ -96,7 +96,7 @@ window.switchMenu = function(menuId) {
 };
 
 // ===============================================
-// 2. RADAR & EKSPEDISI (FIX ICON J&T)
+// 2. RADAR & EKSPEDISI (FIX ICON J&T URL ENCODING)
 // ===============================================
 function getIconEkspedisi(namaCabang) {
     let nama = namaCabang.toLowerCase();
@@ -104,15 +104,20 @@ function getIconEkspedisi(namaCabang) {
     let bgColor = '#ffffff'; 
 
     if (nama.includes('jne')) iconFile = 'jne.png';
-    // FIX J&T: Pastikan file di folder bernama jnt.png karena simbol & error di web server
-    else if (nama.includes('j&t') || nama.includes('j&t') || nama.includes('j & t')) iconFile = 'j&t.png';
+    // Tetap gunakan j&t.png sesuai file lu bro
+    else if (nama.includes('j&t') || nama.includes('jnt') || nama.includes('j & t')) iconFile = 'j&t.png';
     else if (nama.includes('sicepat') || nama.includes('si cepat')) iconFile = 'sicepat.png';
     else if (nama.includes('shopee') || nama.includes('spx')) iconFile = 'spx.png';
     else if (nama.includes('ninja')) { iconFile = 'ninja.png'; bgColor = '#dc2626'; } 
     else if (nama.includes('anteraja')) iconFile = 'anteraja.png';
     else if (nama.includes('wahana')) iconFile = 'wahana.png'; 
 
-    const htmlMarker = `<div style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; background-color:${bgColor}; border-radius:50%; box-shadow:0 4px 10px rgba(0,0,0,0.3); border:2px solid white; overflow:hidden;"><img src="/assets/icons/${iconFile}" style="width:30px; height:30px; object-fit:contain;" onerror="this.src='/assets/icons/pin.png'" /></div>`;
+    // FIX J&T: Ini fungsi buat ngerubah simbol & jadi format URL yang aman (%26)
+    const safeIconFile = encodeURIComponent(iconFile);
+    const timeStamp = new Date().getTime();
+    
+    const htmlMarker = `<div style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; background-color:${bgColor}; border-radius:50%; box-shadow:0 4px 10px rgba(0,0,0,0.3); border:2px solid white; overflow:hidden;"><img src="/assets/icons/${safeIconFile}?v=${timeStamp}" style="width:30px; height:30px; object-fit:contain;" onerror="this.src='/assets/icons/pin.png'" /></div>`;
+    
     return L.divIcon({ className: '', html: htmlMarker, iconSize: [40, 40], iconAnchor: [20, 20], popupAnchor: [0, -20] });
 }
 
@@ -191,7 +196,7 @@ window.hapusEkspedisi = async function(id, nama) {
 };
 
 // ===============================================
-// 3. DISPATCHER ORDER (3 KOLOM GRID)
+// 3. DISPATCHER ORDER
 // ===============================================
 window.loadOrders = async function() {
     if(!sb) return;
@@ -202,15 +207,16 @@ window.loadOrders = async function() {
         const divActive = document.getElementById('list-order-active');
         const divCancel = document.getElementById('list-order-cancel');
         
+        if(!divPending || !divActive || !divCancel) return;
+
         divPending.innerHTML = ''; divActive.innerHTML = ''; divCancel.innerHTML = '';
         let cPen = 0, cAct = 0, cCan = 0;
 
         if (data) {
             data.forEach(o => {
-                const od = o.data; // Data JSON
+                const od = o.data; 
                 const timeCreated = new Date(o.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
                 
-                // Card UI Generator
                 let cardHTML = `
                     <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer" onclick='window.lihatDetailOrder(${JSON.stringify(o).replace(/'/g, "&#39;")})'>
                         <div class="flex justify-between items-start mb-2 border-b border-gray-100 pb-2">
@@ -231,7 +237,6 @@ window.loadOrders = async function() {
                         </div>
                 `;
 
-                // Render per kategori status
                 if (o.status === 'pending') {
                     cardHTML += `
                         <div class="flex gap-2 mt-3" onclick="event.stopPropagation()">
@@ -270,14 +275,13 @@ window.updateStatusOrder = async function(orderId, newStatus) {
 window.lihatDetailOrder = function(order) {
     const modal = document.getElementById('modal-detail-order');
     const body = document.getElementById('detail-order-body');
-    const d = order.data;
+    const d = order.data || {};
     
-    // Tampilan Histori Pekerjaan (Time & Photo)
     let historyHtml = '';
     if(order.status === 'active' || order.status === 'process') {
         historyHtml = `
             <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl mt-4">
-                <h4 class="text-xs font-black text-blue-800 mb-3 border-b border-blue-200 pb-2">Jejeak Pekerjaan Real-Time</h4>
+                <h4 class="text-xs font-black text-blue-800 mb-3 border-b border-blue-200 pb-2">Jejak Pekerjaan Real-Time</h4>
                 <div class="space-y-3">
                     <div class="flex gap-3 items-center"><div class="w-2 h-2 bg-green-500 rounded-full"></div><p class="text-xs font-bold text-gray-700">Order Dibuat: <span class="font-normal text-gray-500">${new Date(order.created_at).toLocaleString('id-ID')}</span></p></div>
                     <div class="flex gap-3 items-center"><div class="w-2 h-2 bg-blue-500 rounded-full"></div><p class="text-xs font-bold text-gray-700">Diambil Driver: <span class="font-normal text-blue-600">${d.driver_name || 'N/A'}</span></p></div>
@@ -291,19 +295,17 @@ window.lihatDetailOrder = function(order) {
     body.innerHTML = `
         <div class="flex justify-between border-b border-gray-100 pb-3"><p class="text-sm font-black text-gray-800">ORDER ID: ${order.id}</p><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold uppercase">${order.status}</span></div>
         <div class="grid grid-cols-2 gap-4">
-            <div><p class="text-[10px] font-bold text-gray-400 uppercase">Pengirim</p><p class="text-xs font-bold text-gray-800">${d.sender_name}</p><p class="text-[10px] text-gray-500">${d.sender_phone}</p></div>
-            <div><p class="text-[10px] font-bold text-gray-400 uppercase">Penerima</p><p class="text-xs font-bold text-gray-800">${d.receiver_name}</p><p class="text-[10px] text-gray-500">${d.receiver_phone}</p></div>
+            <div><p class="text-[10px] font-bold text-gray-400 uppercase">Pengirim</p><p class="text-xs font-bold text-gray-800">${d.sender_name || '-'}</p><p class="text-[10px] text-gray-500">${d.sender_phone || '-'}</p></div>
+            <div><p class="text-[10px] font-bold text-gray-400 uppercase">Penerima</p><p class="text-xs font-bold text-gray-800">${d.receiver_name || '-'}</p><p class="text-[10px] text-gray-500">${d.receiver_phone || '-'}</p></div>
         </div>
         <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-2">
-            <div><p class="text-[10px] font-bold text-gray-400 uppercase">Lokasi Jemput</p><p class="text-xs font-bold text-gray-700">${d.pickup_address}</p></div>
-            <div><p class="text-[10px] font-bold text-gray-400 uppercase">Lokasi Antar</p><p class="text-xs font-bold text-gray-700">${d.dropoff_address}</p></div>
+            <div><p class="text-[10px] font-bold text-gray-400 uppercase">Lokasi Jemput</p><p class="text-xs font-bold text-gray-700">${d.pickup_address || '-'}</p></div>
+            <div><p class="text-[10px] font-bold text-gray-400 uppercase">Lokasi Antar</p><p class="text-xs font-bold text-gray-700">${d.dropoff_address || '-'}</p></div>
         </div>
         ${historyHtml}
     `;
     modal.classList.replace('hidden', 'flex');
 };
-
-setTimeout(() => { window.loadOrders(); }, 1000);
 
 // ===============================================
 // 4. BROADCAST PESAN NOTIFIKASI
@@ -318,14 +320,14 @@ window.simpanBroadcast = async function() {
 
     try {
         await sb.from('notifications').insert([{ target: target, judul: judul, pesan: pesan }]);
-        alert("✅ Broadcast berhasil dikirim! Akan masuk ke Lonceng Notifikasi Customer/Driver.");
+        alert("✅ Broadcast berhasil dikirim!");
         document.getElementById('bc-judul').value = '';
         document.getElementById('bc-pesan').value = '';
     } catch (e) { alert("Error " + e.message); }
 };
 
 // ===============================================
-// 5. MANAJEMEN PROMO POP-UP (IMAGE UPLOAD)
+// 5. MANAJEMEN PROMO POP-UP 
 // ===============================================
 window.previewPromo = function(event) {
     const file = event.target.files[0];
@@ -346,6 +348,8 @@ window.loadPromos = async function() {
     try {
         const { data } = await sb.from('promos').select('*').order('created_at', { ascending: false });
         const listPromo = document.getElementById('list-promo');
+        if(!listPromo) return;
+
         if (data && data.length > 0) {
             listPromo.innerHTML = '';
             data.forEach(p => {
@@ -365,18 +369,14 @@ window.loadPromos = async function() {
         }
     } catch(e) {}
 };
-setTimeout(() => { window.loadPromos(); }, 1500);
 
 window.simpanPromo = async function() {
     const judul = document.getElementById('prm-judul').value;
     const base64 = document.getElementById('prm-base64').value;
-    
     if(!judul || !base64) return alert("⚠️ Isi Judul dan Pilih Gambar Promo!");
-    
     try {
         await sb.from('promos').insert([{ judul: judul, image_base64: base64, is_active: true }]);
         alert("✅ Banner Promo diterbitkan!");
-        // Reset Form
         document.getElementById('prm-judul').value = '';
         document.getElementById('prm-base64').value = '';
         document.getElementById('prm-preview').classList.add('hidden');
@@ -413,6 +413,7 @@ window.loadDrivers = async function() {
     try {
         const { data } = await sb.from('drivers').select('*');
         const tbody = document.getElementById('table-driver-crud');
+        if(!tbody) return;
         if (data && data.length > 0) {
             tbody.innerHTML = '';
             data.forEach(d => {
@@ -422,7 +423,6 @@ window.loadDrivers = async function() {
         }
     } catch(err) { console.error(err); }
 };
-setTimeout(() => { window.loadDrivers(); }, 1200);
 
 window.simpanAkunDriver = async function() {
     const user = document.getElementById('d-user').value;
@@ -448,10 +448,25 @@ window.hapusDriver = async function(id, nama) {
 };
 
 // ===============================================
-// 7. DYNAMIC PRICING
+// 7. DYNAMIC PRICING (INTEGRASI DB)
 // ===============================================
 window.listKategoriBerat = [];
 window.listKategoriDimensi = [];
+
+window.loadTarif = async function() {
+    if(!sb) return;
+    try {
+        const { data } = await sb.from('settings').select('*').eq('id', 1).single();
+        if(data && data.data) {
+            document.getElementById('tf-base').value = data.data.jarak_dasar || '';
+            document.getElementById('tf-perkm').value = data.data.jarak_per_km || '';
+            window.listKategoriBerat = data.data.kategori_berat || [];
+            window.listKategoriDimensi = data.data.kategori_dimensi || [];
+            window.renderBerat();
+            window.renderDimensi();
+        }
+    } catch(e) { console.log("Belum ada setting awal, gunakan default."); }
+}
 
 window.tambahListBerat = function() {
     const namaInput = document.getElementById('input-berat-nama');
@@ -462,9 +477,13 @@ window.tambahListBerat = function() {
     window.listKategoriBerat.push({ nama: nama, harga: harga });
     namaInput.value = ''; hargaInput.value = ''; window.renderBerat();
 };
+
 window.hapusBerat = function(index) { window.listKategoriBerat.splice(index, 1); window.renderBerat(); };
+
 window.renderBerat = function() {
-    const ul = document.getElementById('render-list-berat'); ul.innerHTML = '';
+    const ul = document.getElementById('render-list-berat'); 
+    if(!ul) return;
+    ul.innerHTML = '';
     window.listKategoriBerat.forEach((item, index) => {
         let hargaText = item.harga === 0 ? '<span class="text-green-600 font-black">Gratis</span>' : `<span class="text-orange-600 font-black">+ Rp ${item.harga.toLocaleString('id-ID')}</span>`;
         ul.innerHTML += `<li class="bg-white border border-gray-200 p-3 rounded-xl flex justify-between items-center shadow-sm"><div><p class="text-xs font-bold text-gray-800">${item.nama}</p><p class="text-[10px] mt-0.5">${hargaText}</p></div><button onclick="window.hapusBerat(${index})" class="bg-red-50 text-red-500 hover:bg-red-100 p-2 rounded-lg text-xs font-bold">Hapus</button></li>`;
@@ -480,18 +499,51 @@ window.tambahListDimensi = function() {
     window.listKategoriDimensi.push({ nama: nama, harga: harga });
     namaInput.value = ''; hargaInput.value = ''; window.renderDimensi();
 };
+
 window.hapusDimensi = function(index) { window.listKategoriDimensi.splice(index, 1); window.renderDimensi(); };
+
 window.renderDimensi = function() {
-    const ul = document.getElementById('render-list-dimensi'); ul.innerHTML = '';
+    const ul = document.getElementById('render-list-dimensi'); 
+    if(!ul) return;
+    ul.innerHTML = '';
     window.listKategoriDimensi.forEach((item, index) => {
         let hargaText = item.harga === 0 ? '<span class="text-green-600 font-black">Gratis</span>' : `<span class="text-orange-600 font-black">+ Rp ${item.harga.toLocaleString('id-ID')}</span>`;
         ul.innerHTML += `<li class="bg-white border border-gray-200 p-3 rounded-xl flex justify-between items-center shadow-sm"><div><p class="text-xs font-bold text-gray-800">${item.nama}</p><p class="text-[10px] mt-0.5">${hargaText}</p></div><button onclick="window.hapusDimensi(${index})" class="bg-red-50 text-red-500 hover:bg-red-100 p-2 rounded-lg text-xs font-bold">Hapus</button></li>`;
     });
 };
 
-window.simpanSemuaTarif = function() {
-    alert("✅ Konfigurasi Tarif berhasil disimpan.");
+window.simpanSemuaTarif = async function() {
+    const baseFare = document.getElementById('tf-base').value;
+    const perKmFare = document.getElementById('tf-perkm').value;
+
+    if(!baseFare || !perKmFare) return alert("⚠️ Isi tarif jarak dasar (KM) terlebih dahulu!");
+    if(window.listKategoriBerat.length === 0) return alert("⚠️ Tambahkan minimal 1 kategori berat!");
+    if(window.listKategoriDimensi.length === 0) return alert("⚠️ Tambahkan minimal 1 kategori dimensi!");
+
+    const dataTarif = {
+        jarak_dasar: parseInt(baseFare),
+        jarak_per_km: parseInt(perKmFare),
+        kategori_berat: window.listKategoriBerat,
+        kategori_dimensi: window.listKategoriDimensi
+    };
+
+    if(!sb) return alert("🚨 Database Error");
+    try {
+        await sb.from('settings').upsert({ id: 1, data: dataTarif });
+        alert("✅ Konfigurasi Tarif berhasil disimpan ke Database!");
+    } catch (e) { alert("Error: " + e.message); }
 };
+
+// ===============================================
+// INITIALIZE LOAD DATA ON STARTUP
+// ===============================================
+setTimeout(() => { 
+    window.loadEkspedisi();
+    window.loadDrivers();
+    window.loadOrders();
+    window.loadPromos();
+    window.loadTarif();
+}, 1000);
 
 // ===============================================
 // 8. REALTIME LISTENER
@@ -502,5 +554,6 @@ if (sb) {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, payload => { window.loadDrivers(); })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => { window.loadOrders(); })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'promos' }, payload => { window.loadPromos(); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => { window.loadTarif(); })
         .subscribe();
 }
