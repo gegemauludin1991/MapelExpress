@@ -1,8 +1,7 @@
 /**
- * MAIN APP CONTROLLER - SISI CUSTOMER (FIXED DATABASE CONNECTION)
+ * MAIN APP CONTROLLER - SISI CUSTOMER (FIXED MAP GESTURE & MEMORY LEAK)
  */
 
-// 1. INISIALISASI SUPABASE LANGSUNG DI APP.JS (ANTI GAGAL)
 const supabaseUrl = 'https://nahgibyegdeioquryfde.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
 const sb = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
@@ -10,7 +9,12 @@ const sb = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseK
 const OFFICE = { lat: -6.977414, lng: 107.555359, wa: "6281234567890", alamat: "Jl. Raya Margaasih, Kab. Bandung" };
 const myMap = typeof DynamicMap !== 'undefined' ? new DynamicMap('map', OFFICE.lat, OFFICE.lng, 14) : null;
 
-if (myMap) {
+if (myMap && myMap.map) {
+    // 🔥 FIX BUG MOBILE: Paksa aktifkan cubit, matikan tap delay yang bikin drag jadi zoom
+    myMap.map.touchZoom.enable();
+    myMap.map.dragging.enable();
+    if (myMap.map.tap) myMap.map.tap.disable();
+
     if(myMap.driverMarker) myMap.map.removeLayer(myMap.driverMarker);
     const officeIcon = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45], popupAnchor: [0, -40] });
     L.marker([OFFICE.lat, OFFICE.lng], { icon: officeIcon }).addTo(myMap.map).bindPopup(`
@@ -34,83 +38,62 @@ let liveDriverMarker = null;
 let isOrderActive = false; 
 let currentJenisLayanan = 'personal'; 
 let customerNotifs = JSON.parse(localStorage.getItem('mapel_customer_notif')) || [];
-
 let pickingMode = null; 
 let pickupMarker = null;  
 let targetDestMarker = null; 
 let realGpsLatLng = null; 
 let realGpsMarker = null;
 let reverseGeocodeTimer = null; 
-
-// State Setting Dari Admin
 window.appSettings = { jarak_dasar: 5000, jarak_per_km: 5000, kategori_berat: [], kategori_dimensi: [] };
 window.currentJarakKm = 0; 
 window.totalOngkir = 0;
 
 // ==========================================
-// 2. INISIALISASI DATA DARI SUPABASE
+// 1. INISIALISASI DATA DARI SUPABASE
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
     if (!sb) return alert("Sistem gagal terhubung ke Database Supabase!");
 
     try {
-        // A. CEK SESI & PROFIL (Narik Nama Asli / Email Google)
         const { data: { session } } = await sb.auth.getSession();
         if (session) {
             const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
-            
-            // Logika pintar: Tarik nama Google kalau profile.full_name kosong
             const googleName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email.split('@')[0];
             const finalName = profile?.full_name || googleName;
-
             window.currentUserProfile = profile || { id: session.user.id, full_name: finalName, whatsapp: '' };
             
-            // Isi ke form UI
             document.getElementById('profile-name-input').value = finalName;
             document.getElementById('profile-email-text').innerText = session.user.email;
             document.getElementById('profile-wa-input').value = profile?.whatsapp || '';
             document.getElementById('header-greeting').innerText = `Hai, ${finalName.split(' ')[0]}! 👋`;
         } else {
-            // Kalau belum login, lempar ke index.html
             window.location.replace('index.html');
         }
 
-        // B. TARIK DATA EKSPEDISI REAL-TIME
         const { data: eksData } = await sb.from('ekspedisi').select('*');
-        if (eksData) {
-            window.ekspedisiList = eksData;
-            renderPinEkspedisi(); // Nampilin pin di map
-        }
+        if (eksData) { window.ekspedisiList = eksData; renderPinEkspedisi(); }
 
-        // C. TARIK PENGATURAN TARIF (DYNAMIC PRICING)
         const { data: setttingData } = await sb.from('settings').select('*').eq('id', 1).single();
         if (setttingData && setttingData.data) {
             window.appSettings = setttingData.data;
-            ubahInputJadiDropdown(window.appSettings); // Sulap form HTML jadi Dropdown!
+            ubahInputJadiDropdown(window.appSettings);
             window.hitungTotalOngkir();
         }
-
     } catch(e) { console.error("Gagal load data awal: ", e); }
 
     const btnNotif = document.getElementById('btn-notif-customer');
     const btnProfile = document.getElementById('btn-profile');
-    if (btnNotif) {
-        btnNotif.onclick = () => {
-            renderCustomerNotifs();
-            window.showModal('modal-cust-notif');
-        };
-    }
+    if (btnNotif) btnNotif.onclick = () => { renderCustomerNotifs(); window.showModal('modal-cust-notif'); };
     if (btnProfile) btnProfile.onclick = () => window.showModal('modal-cust-profile');
 });
 
 // ==========================================
-// 3. LOGIC TARIF DINAMIS & UBAH UI JADI DROPDOWN
+// 2. LOGIC TARIF DINAMIS & UI DROPDOWN
 // ==========================================
 function ubahInputJadiDropdown(settings) {
     const elBerat = document.getElementById('form-berat');
     const elDimensi = document.getElementById('form-dimensi');
 
-    // Mengganti Input Berat jadi Select (Aman dari ngerusak UI)
     if(elBerat && elBerat.tagName === 'INPUT') {
         const selBerat = document.createElement('select');
         selBerat.id = 'form-berat';
@@ -118,19 +101,12 @@ function ubahInputJadiDropdown(settings) {
         selBerat.onchange = window.hitungTotalOngkir;
         
         let optBerat = `<option value="0" data-label="-">Pilih Kategori Berat</option>`;
-        settings.kategori_berat.forEach(b => {
-            optBerat += `<option value="${b.harga}" data-label="${b.nama}">${b.nama} ${b.harga > 0 ? '(+Rp '+b.harga.toLocaleString('id-ID')+')' : ''}</option>`;
-        });
+        settings.kategori_berat.forEach(b => { optBerat += `<option value="${b.harga}" data-label="${b.nama}">${b.nama} ${b.harga > 0 ? '(+Rp '+b.harga.toLocaleString('id-ID')+')' : ''}</option>`; });
         selBerat.innerHTML = optBerat;
-        
-        // Hapus tulisan "KG" bawaan HTML biar rapi
-        const spanKg = elBerat.nextElementSibling;
-        if(spanKg && spanKg.tagName === 'SPAN') spanKg.remove();
-        
+        const spanKg = elBerat.nextElementSibling; if(spanKg && spanKg.tagName === 'SPAN') spanKg.remove();
         elBerat.replaceWith(selBerat);
     }
 
-    // Mengganti Input Dimensi jadi Select
     if(elDimensi && elDimensi.tagName === 'INPUT') {
         const selDimensi = document.createElement('select');
         selDimensi.id = 'form-dimensi';
@@ -138,9 +114,7 @@ function ubahInputJadiDropdown(settings) {
         selDimensi.onchange = window.hitungTotalOngkir;
         
         let optDim = `<option value="0" data-label="-">Pilih Dimensi (Ukuran)</option>`;
-        settings.kategori_dimensi.forEach(d => {
-            optDim += `<option value="${d.harga}" data-label="${d.nama}">${d.nama} ${d.harga > 0 ? '(+Rp '+d.harga.toLocaleString('id-ID')+')' : ''}</option>`;
-        });
+        settings.kategori_dimensi.forEach(d => { optDim += `<option value="${d.harga}" data-label="${d.nama}">${d.nama} ${d.harga > 0 ? '(+Rp '+d.harga.toLocaleString('id-ID')+')' : ''}</option>`; });
         selDimensi.innerHTML = optDim;
         elDimensi.replaceWith(selDimensi);
     }
@@ -148,30 +122,21 @@ function ubahInputJadiDropdown(settings) {
 
 window.hitungTotalOngkir = function() {
     if(!window.appSettings) return;
-    
     let baseFare = window.appSettings.jarak_dasar || 5000;
     let perKmFare = window.appSettings.jarak_per_km || 5000;
-    
-    // Logika Jarak: 1 KM pertama ikut Tarif Dasar, sisa KM dikali Tarif per KM
     let extraKm = Math.max(0, window.currentJarakKm - 1); 
-    
-    // Hitung jarak (jika belum ada titik, anggap 0)
     let ongkirJarak = window.currentJarakKm > 0 ? (baseFare + (extraKm * perKmFare)) : 0;
 
-    // Ambil nilai dari Dropdown yang baru kita buat
     const selBerat = document.getElementById('form-berat');
     const selDimensi = document.getElementById('form-dimensi');
-    
     const valBerat = parseInt(selBerat?.value) || 0;
     const valDimensi = parseInt(selDimensi?.value) || 0;
 
     window.totalOngkir = ongkirJarak + valBerat + valDimensi;
 
-    // Update Text Tombol & Label Harga UI
     const btnPesan = document.getElementById('btn-pesan-kurir');
     const labelHargaBesar = document.querySelector('.text-xl.font-black.text-blue-800.leading-none');
 
-    // Hanya ubah tulisan jika harga > 0 dan tombol sedang aktif
     if(window.totalOngkir > 0) {
         if(labelHargaBesar) labelHargaBesar.innerText = `Rp ${window.totalOngkir.toLocaleString('id-ID')}`;
         if(btnPesan && !btnPesan.disabled) {
@@ -183,29 +148,19 @@ window.hitungTotalOngkir = function() {
 }
 
 // ==========================================
-// 4. LOGIC PROFIL & MODAL
+// 3. LOGIC PROFIL & MODAL
 // ==========================================
 window.simpanProfilCustomer = async () => {
     const btn = document.getElementById('btn-save-profile');
     const inputNama = document.getElementById('profile-name-input').value;
     const inputWa = document.getElementById('profile-wa-input').value;
-
     if (!inputNama || !inputWa) return alert("Nama dan WhatsApp wajib diisi bro!");
 
-    btn.innerText = "Menyimpan...";
-    btn.disabled = true;
-
+    btn.innerText = "Menyimpan..."; btn.disabled = true;
     if (sb && window.currentUserProfile) {
-        const { error } = await sb.from('profiles').upsert({
-            id: window.currentUserProfile.id,
-            full_name: inputNama,
-            whatsapp: inputWa,
-            role: 'customer'
-        });
-
-        if (error) {
-            alert("Gagal menyimpan profil: " + error.message);
-        } else {
+        const { error } = await sb.from('profiles').upsert({ id: window.currentUserProfile.id, full_name: inputNama, whatsapp: inputWa, role: 'customer' });
+        if (error) { alert("Gagal menyimpan profil: " + error.message); } 
+        else {
             alert("Mantap, Profil berhasil diperbarui!");
             document.getElementById('header-greeting').innerText = `Hai, ${inputNama.split(' ')[0]}! 👋`;
             window.currentUserProfile.full_name = inputNama;
@@ -213,8 +168,7 @@ window.simpanProfilCustomer = async () => {
             window.closeAllModals();
         }
     }
-    btn.innerText = "Simpan Perubahan";
-    btn.disabled = false;
+    btn.innerText = "Simpan Perubahan"; btn.disabled = false;
 };
 
 window.handleLogout = async () => {
@@ -228,10 +182,7 @@ window.showModal = (id) => {
     if(backdrop) backdrop.classList.remove('hidden');
     setTimeout(() => { 
         const el = document.getElementById(id);
-        if(el) {
-            if(id === 'modal-cust-profile') el.classList.remove('translate-x-full');
-            else el.classList.remove('translate-y-full'); 
-        }
+        if(el) { id === 'modal-cust-profile' ? el.classList.remove('translate-x-full') : el.classList.remove('translate-y-full'); }
     }, 50);
 };
 
@@ -240,10 +191,7 @@ window.closeAllModals = () => {
     if(notifModal) notifModal.classList.add('translate-y-full');
     const profileModal = document.getElementById('modal-cust-profile');
     if(profileModal) profileModal.classList.add('translate-x-full');
-    setTimeout(() => { 
-        const backdrop = document.getElementById('backdrop-overlay');
-        if(backdrop) backdrop.classList.add('hidden'); 
-    }, 300);
+    setTimeout(() => { const backdrop = document.getElementById('backdrop-overlay'); if(backdrop) backdrop.classList.add('hidden'); }, 300);
 };
 
 window.hubungiAdmin = () => { window.open(`https://wa.me/${OFFICE.wa}?text=Halo Admin MapelExpress, saya butuh bantuan...`, '_blank'); };
@@ -253,10 +201,7 @@ function renderCustomerNotifs() {
     const list = document.getElementById('cust-notif-list');
     if(!list) return;
     list.innerHTML = '';
-    if(customerNotifs.length === 0) { 
-        list.innerHTML = `<p class="text-center text-gray-400 font-bold mt-10">Belum ada riwayat notifikasi</p>`; 
-        return; 
-    }
+    if(customerNotifs.length === 0) return list.innerHTML = `<p class="text-center text-gray-400 font-bold mt-10">Belum ada riwayat notifikasi</p>`; 
     
     customerNotifs.forEach(n => {
         list.innerHTML += `
@@ -271,7 +216,7 @@ function renderCustomerNotifs() {
 }
 
 // ==========================================
-// 5. MAP & GPS LOGIC (PICKING, ROUTING)
+// 4. MAP & GPS LOGIC (PICKING, ROUTING)
 // ==========================================
 async function getAddressFromCoords(lat, lng) {
     try {
@@ -299,25 +244,24 @@ function getPinLatLng() {
 const blueDotIcon = typeof L !== 'undefined' ? L.divIcon({ className: 'bg-transparent border-0', html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_0_4px_rgba(59,130,246,0.3)]"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] }) : null;
 
 if(myMap) {
-    myMap.map.locate({ setView: false, watch: true, enableHighAccuracy: true });
-    let isFirstLoc = true;
-
+    // 🔥 FIX LAG/MEMORY LEAK: watch ganti jadi false. Sekali nyari aja pas awal buka.
+    myMap.map.locate({ setView: false, watch: false, enableHighAccuracy: true });
+    
     myMap.map.on('locationfound', (e) => {
         realGpsLatLng = e.latlng; 
         if (!realGpsMarker) realGpsMarker = L.marker(e.latlng, { icon: blueDotIcon, zIndexOffset: 1000 }).addTo(myMap.map);
         else realGpsMarker.setLatLng(e.latlng);
 
-        if (isFirstLoc) { 
-            myMap.map.setView(e.latlng, 16);
-            getAddressFromCoords(e.latlng.lat, e.latlng.lng).then(alamat => {
-                const inputJemput = document.getElementById('input-jemput');
-                if(inputJemput && inputJemput.value === 'Mencari GPS...') inputJemput.value = alamat;
-            });
-            isFirstLoc = false; 
-        }
+        myMap.map.setView(e.latlng, 16);
+        getAddressFromCoords(e.latlng.lat, e.latlng.lng).then(alamat => {
+            const inputJemput = document.getElementById('input-jemput');
+            if(inputJemput && inputJemput.value === 'Mencari GPS...') inputJemput.value = alamat;
+        });
     });
 
     document.getElementById('btn-my-location').onclick = () => {
+        // 🔥 Paksa map nyari lokasi terbaru lagi kalau diklik (Bukan nyari tiap detik)
+        myMap.map.locate({ setView: false, watch: false, enableHighAccuracy: true });
         if (realGpsLatLng) {
             myMap.map.setView(realGpsLatLng, 17, { animate: true });
             getAddressFromCoords(realGpsLatLng.lat, realGpsLatLng.lng).then(alamat => document.getElementById('input-jemput').value = alamat);
@@ -373,7 +317,6 @@ window.exitPickingMode = function() {
     pickingMode = null;
     document.getElementById('set-lokasi-card').classList.add('opacity-0'); 
     document.getElementById('center-pin-overlay').classList.add('hidden');
-    
     setTimeout(() => { 
         document.getElementById('set-lokasi-card').classList.add('hidden'); 
         const bs = document.getElementById('bottom-sheet');
@@ -387,15 +330,11 @@ document.getElementById('btn-pick-tujuan').onclick = () => { pickingMode = 'tuju
 document.getElementById('btn-set-lokasi').onclick = async () => {
     const btn = document.getElementById('btn-set-lokasi');
     const originalText = btn.innerText;
-    btn.innerText = "Memproses...";
-    btn.disabled = true;
+    btn.innerText = "Memproses..."; btn.disabled = true;
 
     const center = getPinLatLng(); 
     let alamat = document.getElementById('set-lokasi-title').innerText;
-    
-    if (alamat === "Geser peta untuk menentukan titik" || alamat === "Mencari lokasi...") {
-        alamat = await getAddressFromCoords(center.lat, center.lng);
-    }
+    if (alamat === "Geser peta untuk menentukan titik" || alamat === "Mencari lokasi...") { alamat = await getAddressFromCoords(center.lat, center.lng); }
     
     if (pickingMode === 'jemput') {
         document.getElementById('input-jemput').value = alamat;
@@ -406,8 +345,7 @@ document.getElementById('btn-set-lokasi').onclick = async () => {
     }
     
     window.exitPickingMode();
-    btn.innerText = originalText;
-    btn.disabled = false;
+    btn.innerText = originalText; btn.disabled = false;
 };
 
 window.swapLokasi = () => {
@@ -415,18 +353,13 @@ window.swapLokasi = () => {
     const inputJemput = document.getElementById('input-jemput');
     const inputTujuan = document.getElementById('input-tujuan');
     
-    const tempText = inputJemput.value;
-    inputJemput.value = inputTujuan.value;
-    inputTujuan.value = tempText;
+    const tempText = inputJemput.value; inputJemput.value = inputTujuan.value; inputTujuan.value = tempText;
 
     const tempLatLng = pickupMarker.getLatLng();
     pickupMarker.setLatLng(targetDestMarker.getLatLng());
     targetDestMarker.setLatLng(tempLatLng);
 
-    myMap.drawRoute([
-        { lat: pickupMarker.getLatLng().lat, lng: pickupMarker.getLatLng().lng }, 
-        { lat: targetDestMarker.getLatLng().lat, lng: targetDestMarker.getLatLng().lng }
-    ], (hasil) => {
+    myMap.drawRoute([{ lat: pickupMarker.getLatLng().lat, lng: pickupMarker.getLatLng().lng }, { lat: targetDestMarker.getLatLng().lat, lng: targetDestMarker.getLatLng().lng }], (hasil) => {
         document.getElementById('label-jarak-rute').innerText = `Jarak: ${hasil.jarakKm} KM`;
         window.currentJarakKm = hasil.jarakKm; 
         window.hitungTotalOngkir(); 
@@ -434,7 +367,7 @@ window.swapLokasi = () => {
 };
 
 // ==========================================
-// 6. EKSPEDISI & RUTING LOGIC
+// 5. EKSPEDISI & RUTING LOGIC
 // ==========================================
 function getEkspedisiLogo(nama) {
     if (!nama) return null;
@@ -488,10 +421,8 @@ window.bukaDaftarEkspedisi = () => {
             </div>`;
         });
     }
-    
     listContainer.classList.replace('hidden', 'flex'); listContainer.classList.add('flex-col');
-    const bs = document.getElementById('bottom-sheet');
-    if(bs) { bs.style.transform = 'translateY(0)'; isSheetOpen = true; }
+    const bs = document.getElementById('bottom-sheet'); if(bs) { bs.style.transform = 'translateY(0)'; isSheetOpen = true; }
 };
 
 window.buatRuteKeTujuan = (targetLat, targetLng, namaTujuan) => {
@@ -514,8 +445,8 @@ window.buatRuteKeTujuan = (targetLat, targetLng, namaTujuan) => {
     const pickupPos = pickupMarker.getLatLng();
     myMap.drawRoute([{ lat: pickupPos.lat, lng: pickupPos.lng }, { lat: targetLat, lng: targetLng }], (hasil) => {
         document.getElementById('label-jarak-rute').innerText = `Jarak: ${hasil.jarakKm} KM`;
-        window.currentJarakKm = hasil.jarakKm; // SIMPAN JARAK
-        window.hitungTotalOngkir(); // RE-KALKULASI ONGKIR BERDASARKAN JARAK BARU
+        window.currentJarakKm = hasil.jarakKm; 
+        window.hitungTotalOngkir(); 
         
         document.getElementById('section-pilih-ekspedisi').classList.add('hidden');
         document.getElementById('section-form-order').classList.remove('hidden');
@@ -525,8 +456,7 @@ window.buatRuteKeTujuan = (targetLat, targetLng, namaTujuan) => {
         btnPesan.className = "bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 pointer-events-auto cursor-pointer shadow-lg active:scale-95";
     });
     
-    const bs = document.getElementById('bottom-sheet');
-    if(bs) { bs.style.transform = 'translateY(0)'; isSheetOpen = true; }
+    const bs = document.getElementById('bottom-sheet'); if(bs) { bs.style.transform = 'translateY(0)'; isSheetOpen = true; }
 };
 
 window.batalPilihEkspedisi = () => {
@@ -540,7 +470,6 @@ window.batalPilihEkspedisi = () => {
     window.hitungTotalOngkir();
 };
 
-// UI Handling Bottom Sheet
 let isSheetOpen = true;
 const sheetHandle = document.getElementById('sheet-handle');
 if (sheetHandle) {
@@ -556,7 +485,7 @@ if (sheetHandle) {
 }
 
 // ==========================================
-// 7. ORDER INSERT LOGIC & REALTIME
+// 6. ORDER INSERT LOGIC & REALTIME
 // ==========================================
 function getBtnOrderHTML(type) {
     if(type === 'loading') {
@@ -568,8 +497,6 @@ function getBtnOrderHTML(type) {
 
 document.getElementById('btn-pesan-kurir').onclick = async () => {
     if (!pickupMarker || !targetDestMarker) return alert("Titik lokasi belum lengkap!");
-    
-    // Validasi No WA
     if(!window.currentUserProfile?.whatsapp) {
         alert("Kamu wajib melengkapi No WhatsApp di Menu Profil sebelum bisa memesan kurir!");
         return window.showModal('modal-cust-profile');
@@ -579,7 +506,6 @@ document.getElementById('btn-pesan-kurir').onclick = async () => {
     btnPesan.innerHTML = getBtnOrderHTML('loading');
     btnPesan.className = "bg-gray-800 text-white text-[13px] font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center gap-2 pointer-events-none shadow-md"; 
     
-    // Mengambil Nama Label dari Dropdown
     const selBerat = document.getElementById('form-berat');
     const selDimensi = document.getElementById('form-dimensi');
     const textBerat = selBerat ? selBerat.options[selBerat.selectedIndex].getAttribute('data-label') || '-' : '-';
@@ -605,14 +531,8 @@ document.getElementById('btn-pesan-kurir').onclick = async () => {
     
     window.currentOrderData = { id: orderId, ...orderDataJSON };
 
-    // Insert to DB
     if(sb) {
-        const { error } = await sb.from('orders').insert({
-            id: orderId,
-            status: 'pending',
-            data: orderDataJSON
-        });
-
+        const { error } = await sb.from('orders').insert({ id: orderId, status: 'pending', data: orderDataJSON });
         if(error) {
             alert("Gagal membuat orderan: " + error.message);
             btnPesan.innerHTML = getBtnOrderHTML('normal');
@@ -626,14 +546,13 @@ document.getElementById('btn-pesan-kurir').onclick = async () => {
                     <p class="text-xs text-gray-500 mt-1">Mohon tunggu sebentar, sistem sedang mencarikan mitra terdekat untuk menjemput paketmu.</p>
                 </div>
             `;
-            // Hide the total distance/price section
             document.querySelector('.flex.items-center.justify-between.pt-2.border-t').style.display = 'none';
         }
     }
 };
 
 // ==========================================
-// 8. LISTENER REALTIME UPDATE DRIVER
+// 7. LISTENER REALTIME UPDATE DRIVER
 // ==========================================
 if(window.appEvents) {
     window.appEvents.on('order_status_changed', (orderData) => {
@@ -668,11 +587,7 @@ if(window.appEvents) {
             isOrderActive = false;
             if (liveDriverMarker && myMap) myMap.map.removeLayer(liveDriverMarker);
             
-            customerNotifs.unshift({ 
-                title: "Paket Selesai Diantar 🎉", 
-                time: getWaktuSekarang(),
-                alamatTujuan: window.currentOrderData.alamatTujuan 
-            });
+            customerNotifs.unshift({ title: "Paket Selesai Diantar 🎉", time: getWaktuSekarang(), alamatTujuan: window.currentOrderData.alamatTujuan });
             localStorage.setItem('mapel_customer_notif', JSON.stringify(customerNotifs));
 
             const successHtml = `
@@ -693,10 +608,7 @@ if(window.appEvents) {
 
     window.appEvents.on('update_driver_map', (data) => {
         if (!isOrderActive || !myMap) return; 
-        if (!liveDriverMarker) {
-            liveDriverMarker = L.marker([data.lat, data.lng], { icon: kurirIcon, zIndexOffset: 99999 }).addTo(myMap.map);
-        } else {
-            liveDriverMarker.setLatLng([data.lat, data.lng]);
-        }
+        if (!liveDriverMarker) { liveDriverMarker = L.marker([data.lat, data.lng], { icon: kurirIcon, zIndexOffset: 99999 }).addTo(myMap.map); } 
+        else { liveDriverMarker.setLatLng([data.lat, data.lng]); }
     });
 }
