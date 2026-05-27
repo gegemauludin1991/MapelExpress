@@ -1,5 +1,5 @@
 /**
- * MAIN APP CONTROLLER - SISI CUSTOMER (FIXED MAP GESTURE & MEMORY LEAK)
+ * MAIN APP CONTROLLER - SISI CUSTOMER (FINAL: PENERIMA + BATAL ORDER)
  */
 
 const supabaseUrl = 'https://nahgibyegdeioquryfde.supabase.co';
@@ -10,7 +10,7 @@ const OFFICE = { lat: -6.977414, lng: 107.555359, wa: "6281234567890", alamat: "
 const myMap = typeof DynamicMap !== 'undefined' ? new DynamicMap('map', OFFICE.lat, OFFICE.lng, 14) : null;
 
 if (myMap && myMap.map) {
-    // 🔥 FIX BUG MOBILE: Paksa aktifkan cubit, matikan tap delay yang bikin drag jadi zoom
+    // FIX BUG MOBILE GESTURE
     myMap.map.touchZoom.enable();
     myMap.map.dragging.enable();
     if (myMap.map.tap) myMap.map.tap.disable();
@@ -47,6 +47,7 @@ let reverseGeocodeTimer = null;
 window.appSettings = { jarak_dasar: 5000, jarak_per_km: 5000, kategori_berat: [], kategori_dimensi: [] };
 window.currentJarakKm = 0; 
 window.totalOngkir = 0;
+window.currentOrderData = null; // Simpan data order sementara
 
 // ==========================================
 // 1. INISIALISASI DATA DARI SUPABASE
@@ -244,7 +245,6 @@ function getPinLatLng() {
 const blueDotIcon = typeof L !== 'undefined' ? L.divIcon({ className: 'bg-transparent border-0', html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_0_4px_rgba(59,130,246,0.3)]"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] }) : null;
 
 if(myMap) {
-    // 🔥 FIX LAG/MEMORY LEAK: watch ganti jadi false. Sekali nyari aja pas awal buka.
     myMap.map.locate({ setView: false, watch: false, enableHighAccuracy: true });
     
     myMap.map.on('locationfound', (e) => {
@@ -260,7 +260,6 @@ if(myMap) {
     });
 
     document.getElementById('btn-my-location').onclick = () => {
-        // 🔥 Paksa map nyari lokasi terbaru lagi kalau diklik (Bukan nyari tiap detik)
         myMap.map.locate({ setView: false, watch: false, enableHighAccuracy: true });
         if (realGpsLatLng) {
             myMap.map.setView(realGpsLatLng, 17, { animate: true });
@@ -485,7 +484,7 @@ if (sheetHandle) {
 }
 
 // ==========================================
-// 6. ORDER INSERT LOGIC & REALTIME
+// 6. ORDER INSERT LOGIC & FUNGSI BATAL
 // ==========================================
 function getBtnOrderHTML(type) {
     if(type === 'loading') {
@@ -495,11 +494,32 @@ function getBtnOrderHTML(type) {
     }
 }
 
+// Fungsi Batalin Pesanan pas Loading Nyari Driver
+window.batalkanPesananSementara = async () => {
+    if(!confirm("Yakin ingin membatalkan pesanan ini?")) return;
+    
+    // Ubah status order di DB jadi 'cancelled' biar masuk riwayat Admin
+    if(sb && window.currentOrderData?.id) {
+        await sb.from('orders').update({ status: 'cancelled' }).eq('id', window.currentOrderData.id);
+    }
+    
+    alert("Pesanan berhasil dibatalkan.");
+    // Reset seluruh UI dan Map bersih sedia kala
+    location.reload(); 
+};
+
 document.getElementById('btn-pesan-kurir').onclick = async () => {
     if (!pickupMarker || !targetDestMarker) return alert("Titik lokasi belum lengkap!");
     if(!window.currentUserProfile?.whatsapp) {
         alert("Kamu wajib melengkapi No WhatsApp di Menu Profil sebelum bisa memesan kurir!");
         return window.showModal('modal-cust-profile');
+    }
+    
+    // Validasi Form Penerima
+    const namaPenerima = document.getElementById('form-nama')?.value;
+    const waPenerima = document.getElementById('form-wa-penerima')?.value;
+    if(!namaPenerima || !waPenerima) {
+        return alert("Nama dan Nomor WA Penerima paket wajib diisi!");
     }
 
     const btnPesan = document.getElementById('btn-pesan-kurir');
@@ -512,9 +532,14 @@ document.getElementById('btn-pesan-kurir').onclick = async () => {
     const textDimensi = selDimensi ? selDimensi.options[selDimensi.selectedIndex].getAttribute('data-label') || '-' : '-';
 
     const orderId = "ORD-" + Math.floor(Math.random() * 90000);
+    
+    // MAPPING DATA KLOP SAMA ADMIN DISPATCHER
     const orderDataJSON = {
         jenisLayanan: currentJenisLayanan,
-        namaBarang: document.getElementById('form-nama').value || 'Paket Reguler',
+        sender_name: window.currentUserProfile?.full_name || 'Customer',
+        sender_phone: window.currentUserProfile?.whatsapp || '',
+        receiver_name: namaPenerima,
+        receiver_phone: waPenerima,
         keterangan: document.getElementById('form-keterangan').value || '-',
         berat: textBerat,
         dimensi: textDimensi,
@@ -524,8 +549,6 @@ document.getElementById('btn-pesan-kurir').onclick = async () => {
         jemputLat: pickupMarker.getLatLng().lat, jemputLng: pickupMarker.getLatLng().lng,
         alamatTujuan: document.getElementById('input-tujuan').value,
         tujuanLat: targetDestMarker.getLatLng().lat, tujuanLng: targetDestMarker.getLatLng().lng,
-        customerName: window.currentUserProfile?.full_name || 'Customer',
-        customerWa: window.currentUserProfile?.whatsapp || '',
         tracking: [{ time: getWaktuSekarang(), status: 'Pesanan Dibuat, Mencari Driver...' }]
     };
     
@@ -543,7 +566,8 @@ document.getElementById('btn-pesan-kurir').onclick = async () => {
                 <div class="bg-blue-50 border border-blue-100 p-5 rounded-3xl mb-3 shadow-sm text-center">
                     <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm animate-pulse"><span class="text-xl">🛵</span></div>
                     <h4 class="font-black text-blue-800">Sedang Mencari Kurir...</h4>
-                    <p class="text-xs text-gray-500 mt-1">Mohon tunggu sebentar, sistem sedang mencarikan mitra terdekat untuk menjemput paketmu.</p>
+                    <p class="text-xs text-gray-500 mt-1 mb-4">Mohon tunggu sebentar, sistem sedang mencarikan mitra terdekat untuk menjemput paketmu.</p>
+                    <button onclick="window.batalkanPesananSementara()" class="w-full bg-red-50 text-red-600 font-bold py-2.5 rounded-xl text-[12px] border border-red-100 active:bg-red-100 transition-all hover:bg-red-200">Batalkan Pencarian</button>
                 </div>
             `;
             document.querySelector('.flex.items-center.justify-between.pt-2.border-t').style.display = 'none';
