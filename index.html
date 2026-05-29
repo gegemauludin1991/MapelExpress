@@ -43,7 +43,7 @@
         <div id="form-login" class="space-y-5">
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase">Email</label>
-                <input type="email" id="login-email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="contoh@email.com">
+                <input type="text" id="login-email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="contoh@email.com / Username Driver">
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase flex justify-between">
@@ -113,20 +113,28 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
         const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+        // CEK SESI DRIVER DI AWAL BIAR LANGSUNG MASUK TANPA SPLASH
+        const driverSession = localStorage.getItem('mapel_driver_session');
+        if (driverSession) {
+            window.location.replace('driver.html');
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
-            setTimeout(() => {
-                const splash = document.getElementById('splash-screen');
-                const authContainer = document.getElementById('auth-container');
-                splash.classList.add('splash-fade-out');
+            if (!driverSession) {
                 setTimeout(() => {
-                    splash.style.display = 'none';
-                    authContainer.classList.remove('hidden');
-                    authContainer.classList.add('form-slide-in');
-                }, 500); 
-            }, 3000); 
+                    const splash = document.getElementById('splash-screen');
+                    const authContainer = document.getElementById('auth-container');
+                    splash.classList.add('splash-fade-out');
+                    setTimeout(() => {
+                        splash.style.display = 'none';
+                        authContainer.classList.remove('hidden');
+                        authContainer.classList.add('form-slide-in');
+                    }, 500); 
+                }, 3000); 
+            }
         });
 
-        // Togel Halaman Login / Register (TERINTEGRASI HISTORY API PENGGANTI BACK)
+        // Togel Halaman Login / Register
         function switchUI(target) {
             const loginForm = document.getElementById('form-login');
             const registerForm = document.getElementById('form-register');
@@ -138,8 +146,6 @@
                 registerForm.classList.remove('hidden');
                 title.innerText = "Buat Akun Baru";
                 subtitle.innerText = "Daftar untuk menikmati layanan kurir.";
-                
-                // Nambahin state memori browser agar tombol back HP terpicu
                 history.pushState({ page: 'register' }, 'Register', '#register');
             } else {
                 registerForm.classList.add('hidden');
@@ -149,16 +155,14 @@
             }
         }
 
-        // Fungsi dieksekusi saat Tombol Back UI ditekan
         function goBackToLogin() {
             if (history.state && history.state.page === 'register') {
-                history.back(); // Trigger HP buat neken tombol back virtual
+                history.back();
             } else {
-                switchUI('login'); // Fallback manual
+                switchUI('login');
             }
         }
 
-        // Listener sakti pendeteksi tombol Back Hardware (Android Back Button)
         window.addEventListener('popstate', (event) => {
             const loginForm = document.getElementById('form-login');
             const registerForm = document.getElementById('form-register');
@@ -171,19 +175,42 @@
             subtitle.innerText = "Masuk untuk mulai mengirim paket.";
         });
 
+        // FUNGSI PROSES LOGIN YANG UDAH DI FIX BUAT DRIVER & CUSTOMER
         async function prosesLogin() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const btn = document.getElementById('btn-login');
 
-            if (!email || !password) return alert("Email dan Password wajib diisi bro!");
+            if (!email || !password) return alert("Email/Username dan Password wajib diisi bro!");
 
             btn.innerText = "Memverifikasi...";
             btn.disabled = true;
 
-            const { error } = await sb.auth.signInWithPassword({ email, password });
-            if (error) {
-                alert("Gagal Login: " + error.message);
+            try {
+                // 1. CEK JALUR DRIVER DULU (Gunakan maybeSingle agar tidak crash)
+                const { data: driverData, error: driverError } = await sb.from('drivers')
+                    .select('*')
+                    .eq('username', email) // Pastikan nama kolom username atau ganti ke email
+                    .eq('password', password)
+                    .maybeSingle();
+                
+                if (driverData) {
+                    // Login Driver Sukses
+                    localStorage.setItem('mapel_driver_session', JSON.stringify(driverData));
+                    window.location.replace('driver.html');
+                    return; // Hentikan eksekusi script Customer
+                }
+
+                // 2. CEK JALUR CUSTOMER
+                const { error } = await sb.auth.signInWithPassword({ email, password });
+                if (error) {
+                    alert("Gagal Login: Username atau password salah!");
+                    btn.innerText = "Masuk";
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Terjadi kesalahan pada sistem verifikasi.");
                 btn.innerText = "Masuk";
                 btn.disabled = false;
             }
