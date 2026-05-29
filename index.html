@@ -42,8 +42,8 @@
 
         <div id="form-login" class="space-y-5">
             <div>
-                <label class="text-xs font-bold text-gray-500 uppercase">Email</label>
-                <input type="text" id="login-email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="contoh@email.com / Username Driver">
+                <label class="text-xs font-bold text-gray-500 uppercase">Email / Username</label>
+                <input type="email" id="login-email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="contoh@email.com / driver01">
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase flex justify-between">
@@ -113,28 +113,20 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
         const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        // CEK SESI DRIVER DI AWAL BIAR LANGSUNG MASUK TANPA SPLASH
-        const driverSession = localStorage.getItem('mapel_driver_session');
-        if (driverSession) {
-            window.location.replace('driver.html');
-        }
-
         document.addEventListener("DOMContentLoaded", () => {
-            if (!driverSession) {
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                const authContainer = document.getElementById('auth-container');
+                splash.classList.add('splash-fade-out');
                 setTimeout(() => {
-                    const splash = document.getElementById('splash-screen');
-                    const authContainer = document.getElementById('auth-container');
-                    splash.classList.add('splash-fade-out');
-                    setTimeout(() => {
-                        splash.style.display = 'none';
-                        authContainer.classList.remove('hidden');
-                        authContainer.classList.add('form-slide-in');
-                    }, 500); 
-                }, 3000); 
-            }
+                    splash.style.display = 'none';
+                    authContainer.classList.remove('hidden');
+                    authContainer.classList.add('form-slide-in');
+                }, 500); 
+            }, 3000); 
         });
 
-        // Togel Halaman Login / Register
+        // Togel Halaman Login / Register 
         function switchUI(target) {
             const loginForm = document.getElementById('form-login');
             const registerForm = document.getElementById('form-register');
@@ -157,9 +149,9 @@
 
         function goBackToLogin() {
             if (history.state && history.state.page === 'register') {
-                history.back();
+                history.back(); 
             } else {
-                switchUI('login');
+                switchUI('login'); 
             }
         }
 
@@ -175,7 +167,7 @@
             subtitle.innerText = "Masuk untuk mulai mengirim paket.";
         });
 
-        // FUNGSI PROSES LOGIN YANG UDAH DI FIX BUAT DRIVER & CUSTOMER
+        // LOGIKA LOGIN SUPER AMAN (DUKUNG ADMIN AUTH & CUSTOM TABLE)
         async function prosesLogin() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
@@ -187,30 +179,41 @@
             btn.disabled = true;
 
             try {
-                // 1. CEK JALUR DRIVER DULU (Gunakan maybeSingle agar tidak crash)
-                const { data: driverData, error: driverError } = await sb.from('drivers')
-                    .select('*')
-                    .eq('username', email) // Pastikan nama kolom username atau ganti ke email
-                    .eq('password', password)
-                    .maybeSingle();
+                // 1. Coba login pakai jalur Supabase Auth (Akun dari halaman Admin)
+                const { data: authData, error: authError } = await sb.auth.signInWithPassword({ email, password });
                 
-                if (driverData) {
-                    // Login Driver Sukses
-                    localStorage.setItem('mapel_driver_session', JSON.stringify(driverData));
-                    window.location.replace('driver.html');
-                    return; // Hentikan eksekusi script Customer
+                if (!authError && authData.session) {
+                    // Sukses Auth, Cek Role dia apa
+                    const { data: profile } = await sb.from('profiles').select('role').eq('id', authData.session.user.id).single();
+                    const role = profile?.role || 'customer';
+                    
+                    if (role === 'admin') return window.location.replace('admin.html');
+                    if (role === 'driver' || role === 'kurir') return window.location.replace('driver.html');
+                    return window.location.replace('app.html'); // Sisanya lempar ke customer
                 }
 
-                // 2. CEK JALUR CUSTOMER
-                const { error } = await sb.auth.signInWithPassword({ email, password });
-                if (error) {
-                    alert("Gagal Login: Username atau password salah!");
-                    btn.innerText = "Masuk";
-                    btn.disabled = false;
+                // 2. Kalau Auth gagal, coba cari di tabel custom 'drivers'
+                let { data: driverData } = await sb.from('drivers').select('*').eq('email', email).eq('password', password).maybeSingle();
+                
+                // Coba cari pakai kolom username kalau email kosong
+                if (!driverData) {
+                    let { data: driverData2 } = await sb.from('drivers').select('*').eq('username', email).eq('password', password).maybeSingle();
+                    driverData = driverData2;
                 }
+
+                if (driverData) {
+                    localStorage.setItem('mapel_driver_session', JSON.stringify(driverData));
+                    return window.location.replace('driver.html');
+                }
+
+                // Kalau dua-duanya gagal total
+                alert("Gagal Login: Akun tidak ditemukan atau password salah!");
+                btn.innerText = "Masuk";
+                btn.disabled = false;
+
             } catch (err) {
-                console.error(err);
-                alert("Terjadi kesalahan pada sistem verifikasi.");
+                console.error("Login Error:", err);
+                alert("Terjadi kesalahan sistem saat memverifikasi.");
                 btn.innerText = "Masuk";
                 btn.disabled = false;
             }
@@ -237,6 +240,11 @@
                 alert("Gagal Daftar: " + error.message);
                 btn.innerText = "Buat Akun";
                 btn.disabled = false;
+            } else {
+                alert("Pendaftaran berhasil! Silakan login.");
+                switchUI('login');
+                btn.innerText = "Buat Akun";
+                btn.disabled = false;
             }
         }
 
@@ -257,14 +265,17 @@
             }
         }
 
+        // Listener otomatis buat mindahin user kalau sesinya udah ada
         sb.auth.onAuthStateChange(async (event, session) => {
-            if (session) {
-                const { data } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
-                const role = data?.role || 'customer';
-                
-                if (role === 'admin') window.location.replace('admin.html');
-                else if (role === 'driver') window.location.replace('driver.html');
-                else window.location.replace('app.html');
+            if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+                try {
+                    const { data } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
+                    const role = data?.role || 'customer';
+                    
+                    if (role === 'admin') window.location.replace('admin.html');
+                    else if (role === 'driver' || role === 'kurir') window.location.replace('driver.html');
+                    else window.location.replace('app.html');
+                } catch(e) { console.log(e); }
             }
         });
     </script>
