@@ -1,9 +1,8 @@
 /**
- * MAIN APP CONTROLLER - SISI KURIR / DRIVER (FIXED & FULL SYNC)
- * - GPS Marker Live Update
- * - Toggle ON/OFF Auto Save
- * - Sync Map Ekspedisi
- * - Terima Order dari Customer
+ * MAIN APP CONTROLLER - SISI KURIR / DRIVER (FULL SYNC)
+ * - Map Layer Toggle (Street/Satellite)
+ * - Profil Bisa Diedit & Disimpan ke Database
+ * - GPS Marker Live
  */
 
 const supabaseUrl = 'https://nahgibyegdeioquryfde.supabase.co';
@@ -17,61 +16,81 @@ const myMap = typeof DynamicMap !== 'undefined' ? new DynamicMap('map', OFFICE.l
 // STATE GLOBAL
 // ==========================================
 let currentGpsLocation = OFFICE;
-let driverMarker = null; // Marker Live buat Kurir
+let driverMarker = null; 
 let driverStats = JSON.parse(localStorage.getItem('mapel_driver_stats')) || { saldo: 0, totalOrder: 0 };
-let isOnline = localStorage.getItem('mapel_driver_is_online') === 'true'; // Ambil status ON/OFF terakhir
+let isOnline = localStorage.getItem('mapel_driver_is_online') === 'true'; 
 let activeOrder = null; 
 let photoStep = null; 
+window.driverSessionSource = 'local'; // Flag untuk cek db sumber (auth vs custom table)
 
 // ==========================================
-// MAP & GPS INIT
+// MAP & GPS INIT & LAYER TOGGLE
 // ==========================================
 if (myMap && myMap.map) {
     myMap.map.touchZoom.enable();
     myMap.map.dragging.enable();
     if (myMap.map.tap) myMap.map.tap.disable();
 
+    // Setup Map Layers (Satelit vs 3D/Street)
+    const tileStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+    const tileSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles &copy; Esri' });
+    let isSatMode = false;
+
+    // Bersihkan bawaan DynamicMap lalu inject layer yang bisa ditoggle
+    myMap.map.eachLayer((layer) => { if (layer instanceof L.TileLayer) myMap.map.removeLayer(layer); });
+    tileStreet.addTo(myMap.map);
+
+    const btnMapLayer = document.getElementById('btn-map-layer');
+    if (btnMapLayer) {
+        btnMapLayer.onclick = () => {
+            if (isSatMode) {
+                myMap.map.removeLayer(tileSat);
+                tileStreet.addTo(myMap.map);
+                btnMapLayer.classList.replace('text-blue-600', 'text-gray-600');
+                btnMapLayer.classList.replace('bg-blue-50', 'bg-white');
+            } else {
+                myMap.map.removeLayer(tileStreet);
+                tileSat.addTo(myMap.map);
+                btnMapLayer.classList.replace('text-gray-600', 'text-blue-600');
+                btnMapLayer.classList.replace('bg-white', 'bg-blue-50');
+            }
+            isSatMode = !isSatMode;
+        };
+    }
+
     // Icon Kantor Pusat
     const officeIcon = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45], popupAnchor: [0, -40] });
     L.marker([OFFICE.lat, OFFICE.lng], { icon: officeIcon }).addTo(myMap.map)
         .bindPopup("<div class='font-bold text-center text-blue-800 text-xs'>Pusat Operasional<br>MapelExpress</div>");
 
-    // Lacak GPS Realtime
+    // Lacak GPS Realtime Driver
     myMap.map.locate({ setView: false, watch: true, enableHighAccuracy: true });
     myMap.map.on('locationfound', (e) => { 
         currentGpsLocation = e.latlng; 
         
-        // Bikin atau pindahin Icon Driver di Peta
         if (!driverMarker) {
             const kurirIcon = L.icon({ iconUrl: '/assets/icons/kurir.png', iconSize: [40, 40], iconAnchor: [20, 20], popupAnchor: [0, -20] });
             driverMarker = L.marker([e.latlng.lat, e.latlng.lng], { icon: kurirIcon, zIndexOffset: 9999 })
                 .addTo(myMap.map)
                 .bindPopup("<div class='text-[10px] font-bold uppercase'>Posisi Saya</div>");
-            myMap.map.setView(e.latlng, 16); // Fokus map ke driver saat pertama dapat GPS
+            myMap.map.setView(e.latlng, 16);
         } else {
-            driverMarker.setLatLng(e.latlng); // Update live posisinya
+            driverMarker.setLatLng(e.latlng);
         }
 
-        // Kalau lagi nganter order & lagi Online, kirim lokasi ke Customer
         if(isOnline && activeOrder) broadcastLocation(e.latlng); 
     });
 
-    // Tombol "Posisi Saya" (Kanan Bawah Map)
     const btnMyLocation = document.getElementById('btn-my-location');
     if (btnMyLocation) {
         btnMyLocation.onclick = () => {
-            if (currentGpsLocation && myMap) {
-                myMap.map.setView(currentGpsLocation, 17, { animate: true });
-            } else {
-                myMap.map.locate({ setView: true, maxZoom: 17, enableHighAccuracy: true });
-            }
+            if (currentGpsLocation && myMap) myMap.map.setView(currentGpsLocation, 17, { animate: true });
+            else myMap.map.locate({ setView: true, maxZoom: 17, enableHighAccuracy: true });
         };
     }
 }
 
-// ==========================================
-// RENDER PIN EKSPEDISI DARI DATABASE
-// ==========================================
+// Load Pin Ekspedisi
 async function loadEkspedisiPin() {
     if(!sb || !myMap) return;
     const { data: eksData } = await sb.from('ekspedisi').select('*');
@@ -97,24 +116,26 @@ async function loadEkspedisiPin() {
 }
 
 // ==========================================
-// INISIALISASI SESI DRIVER & UI
+// INISIALISASI SESI & PROFIL
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     if (!sb) return alert("Koneksi Database Gagal!");
 
     let validSession = null;
 
-    // 1. Cek jalur Supabase Auth
+    // 1. Cek dari Supabase Auth
     const { data: { session } } = await sb.auth.getSession();
     if (session) {
         const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
         if (profile && (profile.role === 'driver' || profile.role === 'kurir')) {
+            window.driverSessionSource = 'auth';
             validSession = {
                 id: profile.id,
                 nama: profile.full_name || profile.nama || 'Driver Mapel',
                 whatsapp: profile.whatsapp || '-',
-                nopol: profile.nopol || 'D 1234 XX',
+                nopol: profile.nopol || '',
                 tipe_kendaraan: profile.tipe_kendaraan || 'Motor',
+                warna: profile.warna || '',
                 foto: profile.foto || '/assets/icons/kurir.png'
             };
         }
@@ -124,47 +145,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!validSession) {
         const localData = localStorage.getItem('mapel_driver_session');
         if (localData) {
+            window.driverSessionSource = 'local';
             validSession = JSON.parse(localData);
         }
     }
 
     if (!validSession) {
-        alert("Sesi habis atau akun tidak valid. Silakan login kembali.");
+        alert("Sesi habis. Silakan login kembali.");
         window.location.replace('index.html');
         return;
     }
 
     window.driverSession = validSession;
 
+    // Render Profil UI
     document.getElementById('dash-name').innerText = validSession.nama;
-    document.getElementById('dash-id').innerText = `ID: DRV-${validSession.id.substring(0,6).toUpperCase()}`;
-    const dashPhoto = document.getElementById('dash-photo');
-    if(dashPhoto) dashPhoto.src = validSession.foto || '/assets/icons/kurir.png';
-    const setPhoto = document.getElementById('set-photo-preview');
-    if(setPhoto) setPhoto.src = validSession.foto || '/assets/icons/kurir.png';
+    document.getElementById('dash-id').innerText = `ID: DRV-${String(validSession.id).substring(0,6).toUpperCase()}`;
+    if(document.getElementById('dash-photo')) document.getElementById('dash-photo').src = validSession.foto || '/assets/icons/kurir.png';
+    if(document.getElementById('set-photo-preview')) document.getElementById('set-photo-preview').src = validSession.foto || '/assets/icons/kurir.png';
     document.getElementById('set-nama').value = validSession.nama;
     document.getElementById('set-wa').value = validSession.whatsapp;
     document.getElementById('set-nopol').value = validSession.nopol || '';
+    if(validSession.warna) document.getElementById('set-warna').value = validSession.warna;
+    document.getElementById('set-jenis').value = validSession.tipe_kendaraan || 'Motor';
 
     updateSaldoUI();
-    
-    // Load Pin Map & Listener Orderan Baru
     loadEkspedisiPin();
     listenToIncomingOrders();
 
-    // Fungsi Logout
-    const btnLogout = document.getElementById('btn-logout');
-    if(btnLogout) {
-        btnLogout.onclick = async () => {
-            if(!confirm("Yakin mau logout?")) return;
-            localStorage.removeItem('mapel_driver_session');
-            localStorage.removeItem('mapel_driver_is_online');
-            if(sb) await sb.auth.signOut();
-            window.location.replace('index.html');
-        };
-    }
-
-    // Tahan Status ON/OFF dari Refresh Browser
+    // Toggle Online/Offline Tetap Nempel
     const toggle = document.getElementById('toggle-status');
     const statusText = document.getElementById('status-text');
     if(toggle) {
@@ -174,14 +183,76 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         toggle.addEventListener('change', (e) => {
             isOnline = e.target.checked;
-            localStorage.setItem('mapel_driver_is_online', isOnline); // SIMPAN STATUS KE HP
+            localStorage.setItem('mapel_driver_is_online', isOnline); 
             statusText.innerText = isOnline ? "ONLINE" : "OFFLINE";
             statusText.className = isOnline ? "text-[11px] font-black text-green-500 uppercase" : "text-[11px] font-bold text-gray-400 uppercase";
         });
     }
 
-    const btnTest = document.getElementById('btn-test-order');
-    if(btnTest) btnTest.style.display = 'none'; 
+    // FUNGSI UPLOAD FOTO PROFIL (Base64)
+    const uploadPhoto = document.getElementById('upload-photo');
+    if(uploadPhoto) {
+        uploadPhoto.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const base64Str = event.target.result;
+                    document.getElementById('set-photo-preview').src = base64Str;
+                    document.getElementById('dash-photo').src = base64Str;
+                    window.driverSession.foto = base64Str; 
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // FUNGSI SIMPAN PERUBAHAN PROFIL
+    const btnSaveProfile = document.getElementById('btn-save-profile');
+    if (btnSaveProfile) {
+        btnSaveProfile.onclick = async () => {
+            btnSaveProfile.innerText = "Menyimpan...";
+            btnSaveProfile.disabled = true;
+
+            const updateData = {
+                nama: document.getElementById('set-nama').value,
+                whatsapp: document.getElementById('set-wa').value,
+                nopol: document.getElementById('set-nopol').value,
+                warna: document.getElementById('set-warna').value,
+                tipe_kendaraan: document.getElementById('set-jenis').value,
+                foto: window.driverSession.foto 
+            };
+
+            try {
+                // Update ke DB tergantung dari mana driver login
+                if (window.driverSessionSource === 'auth') {
+                    const authPayload = { 
+                        full_name: updateData.nama, 
+                        whatsapp: updateData.whatsapp, 
+                        nopol: updateData.nopol,
+                        warna: updateData.warna, 
+                        tipe_kendaraan: updateData.tipe_kendaraan, 
+                        foto: updateData.foto 
+                    };
+                    await sb.from('profiles').update(authPayload).eq('id', window.driverSession.id);
+                } else {
+                    await sb.from('drivers').update(updateData).eq('id', window.driverSession.id);
+                }
+
+                // Update Local Data
+                window.driverSession = { ...window.driverSession, ...updateData };
+                localStorage.setItem('mapel_driver_session', JSON.stringify(window.driverSession));
+                document.getElementById('dash-name').innerText = window.driverSession.nama;
+
+                alert("Profil berhasil diperbarui!");
+            } catch (error) {
+                alert("Gagal menyimpan profil: " + error.message);
+            } finally {
+                btnSaveProfile.innerText = "SIMPAN PERUBAHAN";
+                btnSaveProfile.disabled = false;
+            }
+        };
+    }
 });
 
 function updateSaldoUI() {
@@ -202,7 +273,6 @@ window.switchTab = function(target) {
         if(tabs[k]) { tabs[k].classList.add('hidden', 'opacity-0'); }
         if(navBtns[k]) { navBtns[k].classList.remove('text-blue-600'); navBtns[k].classList.add('text-gray-400'); }
     });
-    
     if(tabs[target]) { 
         tabs[target].classList.remove('hidden'); 
         setTimeout(() => tabs[target].classList.remove('opacity-0'), 50); 
@@ -214,11 +284,6 @@ window.switchTab = function(target) {
     if (target === 'map' && myMap && myMap.map) setTimeout(() => myMap.map.invalidateSize(), 300);
 };
 
-if(navBtns.dashboard) navBtns.dashboard.onclick = () => window.switchTab('dashboard');
-if(navBtns.map) navBtns.map.onclick = () => window.switchTab('map');
-if(navBtns.notif) navBtns.notif.onclick = () => window.switchTab('notif');
-if(navBtns.settings) navBtns.settings.onclick = () => window.switchTab('settings');
-
 // ==========================================
 // REALTIME ORDER & KAMERA LOGIC
 // ==========================================
@@ -226,7 +291,6 @@ function listenToIncomingOrders() {
     sb.channel('public:orders')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
             const order = payload.new;
-            // Harus ON, nggak ada tugas aktif, dan status order masih pending
             if (isOnline && !activeOrder && order.status === 'pending') {
                 munculkanPopupOrder(order);
             }
@@ -237,8 +301,6 @@ function munculkanPopupOrder(order) {
     const d = order.data;
     document.getElementById('order-jemput').innerText = d.alamatJemput || '-';
     document.getElementById('order-tujuan').innerText = d.alamatTujuan || '-';
-    
-    // Perbaikan varibel barang: dari customer varibelnya 'keterangan'
     document.getElementById('order-barang').innerText = `${d.keterangan || 'Paket Reguler'} (${d.berat || '-'})`;
     document.querySelector('.text-[16px].font-black.text-blue-700').innerText = `Rp ${d.totalOngkir.toLocaleString('id-ID')}`;
 
@@ -294,7 +356,6 @@ function mulaiTugasDriver() {
     btnAction.innerText = "PAKET SUDAH DIAMBIL";
     btnAction.className = "w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg active:bg-blue-700 transition-all active:scale-[0.98] mt-2";
     
-    // Draw rute di map (dari GPS kita saat ini menuju titik jemput customer)
     if(myMap && currentGpsLocation && activeOrder) {
         myMap.drawRoute([{ lat: currentGpsLocation.lat, lng: currentGpsLocation.lng }, { lat: activeOrder.jemputLat, lng: activeOrder.jemputLng }], () => {});
     }
