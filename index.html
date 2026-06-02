@@ -43,7 +43,7 @@
         <div id="form-login" class="space-y-5">
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase">Email / Username</label>
-                <input type="email" id="login-email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="contoh@email.com / driver01">
+                <input type="text" id="login-email" class="w-full mt-1 bg-white border border-gray-200 rounded-xl px-4 py-3.5 font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" placeholder="contoh@email.com / driver01">
             </div>
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase flex justify-between">
@@ -113,20 +113,26 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haGdpYnllZ2RlaW9xdXJ5ZmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODM3NjksImV4cCI6MjA5NDE1OTc2OX0.NeN2uqRTKEJyc0SOEIV5iUQIIOGf88A46KRJffGUKmQ';
         const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+        const driverSession = localStorage.getItem('mapel_driver_session');
+        if (driverSession) {
+            window.location.replace('driver.html');
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
-            setTimeout(() => {
-                const splash = document.getElementById('splash-screen');
-                const authContainer = document.getElementById('auth-container');
-                splash.classList.add('splash-fade-out');
+            if (!driverSession) {
                 setTimeout(() => {
-                    splash.style.display = 'none';
-                    authContainer.classList.remove('hidden');
-                    authContainer.classList.add('form-slide-in');
-                }, 500); 
-            }, 3000); 
+                    const splash = document.getElementById('splash-screen');
+                    const authContainer = document.getElementById('auth-container');
+                    splash.classList.add('splash-fade-out');
+                    setTimeout(() => {
+                        splash.style.display = 'none';
+                        authContainer.classList.remove('hidden');
+                        authContainer.classList.add('form-slide-in');
+                    }, 500); 
+                }, 3000); 
+            }
         });
 
-        // Togel Halaman Login / Register 
         function switchUI(target) {
             const loginForm = document.getElementById('form-login');
             const registerForm = document.getElementById('form-register');
@@ -167,7 +173,7 @@
             subtitle.innerText = "Masuk untuk mulai mengirim paket.";
         });
 
-        // LOGIKA LOGIN SUPER AMAN (DUKUNG ADMIN AUTH & CUSTOM TABLE)
+        // LOGIKA LOGIN ANTI-STUCK (DIPERBAIKI)
         async function prosesLogin() {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
@@ -179,41 +185,39 @@
             btn.disabled = true;
 
             try {
-                // 1. Coba login pakai jalur Supabase Auth (Akun dari halaman Admin)
+                // 1. Coba login Auth Resmi (Admin/Customer/Driver Ber-Email)
                 const { data: authData, error: authError } = await sb.auth.signInWithPassword({ email, password });
                 
-                if (!authError && authData.session) {
-                    // Sukses Auth, Cek Role dia apa
-                    const { data: profile } = await sb.from('profiles').select('role').eq('id', authData.session.user.id).single();
+                if (authData && authData.session) {
+                    const { data: profile } = await sb.from('profiles').select('role').eq('id', authData.session.user.id).maybeSingle();
                     const role = profile?.role || 'customer';
                     
                     if (role === 'admin') return window.location.replace('admin.html');
                     if (role === 'driver' || role === 'kurir') return window.location.replace('driver.html');
-                    return window.location.replace('app.html'); // Sisanya lempar ke customer
+                    return window.location.replace('app.html'); 
                 }
 
-                // 2. Kalau Auth gagal, coba cari di tabel custom 'drivers'
-                let { data: driverData } = await sb.from('drivers').select('*').eq('email', email).eq('password', password).maybeSingle();
-                
-                // Coba cari pakai kolom username kalau email kosong
-                if (!driverData) {
-                    let { data: driverData2 } = await sb.from('drivers').select('*').eq('username', email).eq('password', password).maybeSingle();
-                    driverData = driverData2;
-                }
+                // 2. Cek Custom Table Drivers (Buat Akun Manual yang pake Username)
+                // Menggunakan .or() agar langsung nyari di kolom username ATAU email
+                const { data: driverData, error: driverError } = await sb.from('drivers')
+                    .select('*')
+                    .eq('password', password)
+                    .or(`username.eq.${email},email.eq.${email}`)
+                    .maybeSingle();
 
                 if (driverData) {
                     localStorage.setItem('mapel_driver_session', JSON.stringify(driverData));
                     return window.location.replace('driver.html');
                 }
 
-                // Kalau dua-duanya gagal total
+                // Kalau nyampe sini berarti emang salah pass/akun gak ada
                 alert("Gagal Login: Akun tidak ditemukan atau password salah!");
-                btn.innerText = "Masuk";
-                btn.disabled = false;
 
             } catch (err) {
                 console.error("Login Error:", err);
-                alert("Terjadi kesalahan sistem saat memverifikasi.");
+                alert("Terjadi kesalahan sistem: " + err.message);
+            } finally {
+                // FINALLY: Pastikan tombol selalu balik normal apapun error-nya
                 btn.innerText = "Masuk";
                 btn.disabled = false;
             }
@@ -265,7 +269,6 @@
             }
         }
 
-        // Listener otomatis buat mindahin user kalau sesinya udah ada
         sb.auth.onAuthStateChange(async (event, session) => {
             if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
                 try {
