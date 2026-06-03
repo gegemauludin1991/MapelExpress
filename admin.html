@@ -35,6 +35,7 @@
             <a href="#" onclick="window.switchMenu('radar')" id="nav-radar" class="sidebar-item active block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Radar Kurir</a>
             <a href="#" onclick="window.switchMenu('dispatch')" id="nav-dispatch" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Dispatcher Order</a>
             <a href="#" onclick="window.switchMenu('ekspedisi')" id="nav-ekspedisi" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Setup Ekspedisi</a>
+            <a href="#" onclick="window.switchMenu('radius')" id="nav-radius" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Setting Radius</a>
             <a href="#" onclick="window.switchMenu('broadcast')" id="nav-broadcast" class="sidebar-item block px-6 py-3 font-bold text-gray-500 hover:bg-gray-50 transition-colors text-sm">Broadcast Pesan</a>
 
             <p class="px-6 py-2 mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bisnis & User</p>
@@ -114,6 +115,21 @@
                                 </table>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-radius" class="w-full hidden p-4 md:p-6 pb-20">
+                <div class="max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
+                    <h3 class="font-black text-gray-800 text-xl mb-2">Setting Radius Wilayah</h3>
+                    <p class="text-xs text-gray-500 mb-6 border-b border-gray-100 pb-4">Atur batas maksimal jarak pengiriman dari pusat (Kantor Ekspedisi).</p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Maksimal Radius (KM)</label>
+                            <input type="number" id="rad-max" class="w-full mt-1 bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 font-bold outline-none" placeholder="Cth: 15">
+                        </div>
+                        <button onclick="alert('Radius tersimpan!')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-lg transition-colors mt-4">Simpan Radius</button>
                     </div>
                 </div>
             </div>
