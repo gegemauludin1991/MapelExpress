@@ -1,6 +1,6 @@
 /**
  * ADMIN ENGINE - MAPEL EXPRESS
- * (ALL FEATURES V2: FULLY FUNCTIONAL DB INTEGRATION & FIX J&T URL ENCODING)
+ * (ALL FEATURES V2: FULLY FUNCTIONAL DB INTEGRATION)
  */
 
 const sb = window.sb || (typeof supabase !== 'undefined' ? supabase : null);
@@ -66,7 +66,7 @@ window.toggleSheetEks = function() {
 };
 
 const viewTitles = {
-    'radar': 'God Eye Radar', 'dispatch': 'Manajemen Dispatcher', 'ekspedisi': 'Setup Ekspedisi', 'broadcast': 'Broadcast Global', 'pricing': 'Pengaturan Tarif Dinamis', 'promo': 'Manajemen Promo', 'driver': 'Data Akun Driver'
+    'radar': 'God Eye Radar', 'dispatch': 'Manajemen Dispatcher', 'ekspedisi': 'Setup Ekspedisi', 'radius': 'Setting Radius', 'broadcast': 'Broadcast Global', 'pricing': 'Pengaturan Tarif Dinamis', 'promo': 'Manajemen Promo', 'driver': 'Data Akun Driver'
 };
 
 window.switchMenu = function(menuId) {
@@ -82,7 +82,7 @@ window.switchMenu = function(menuId) {
     const hTitle = document.getElementById('header-title');
     if(hTitle) hTitle.innerText = viewTitles[menuId] || 'Admin Panel';
 
-    const views = ['view-radar', 'view-dispatch', 'view-ekspedisi', 'view-broadcast', 'view-pricing', 'view-promo', 'view-driver'];
+    const views = ['view-radar', 'view-dispatch', 'view-ekspedisi', 'view-radius', 'view-broadcast', 'view-pricing', 'view-promo', 'view-driver'];
     views.forEach(v => { const el = document.getElementById(v); if(el) el.classList.add('hidden'); });
     
     const targetView = document.getElementById(`view-${menuId}`);
@@ -104,7 +104,6 @@ function getIconEkspedisi(namaCabang) {
     let bgColor = '#ffffff'; 
 
     if (nama.includes('jne')) iconFile = 'jne.png';
-    // Tetap gunakan j&t.png sesuai file lu bro
     else if (nama.includes('j&t') || nama.includes('jnt') || nama.includes('j & t')) iconFile = 'j&t.png';
     else if (nama.includes('sicepat') || nama.includes('si cepat')) iconFile = 'sicepat.png';
     else if (nama.includes('shopee') || nama.includes('spx')) iconFile = 'spx.png';
@@ -112,7 +111,6 @@ function getIconEkspedisi(namaCabang) {
     else if (nama.includes('anteraja')) iconFile = 'anteraja.png';
     else if (nama.includes('wahana')) iconFile = 'wahana.png'; 
 
-    // FIX J&T: Ini fungsi buat ngerubah simbol & jadi format URL yang aman (%26)
     const safeIconFile = encodeURIComponent(iconFile);
     const timeStamp = new Date().getTime();
     
@@ -549,7 +547,8 @@ setTimeout(() => {
 // 8. REALTIME LISTENER
 // ===============================================
 if (sb) {
-    sb.channel('public:semua_table')
+    // FIX PENTING: Ganti ke channel standar 'public:orders' biar nyambung sama Driver
+    sb.channel('public:orders')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'ekspedisi' }, payload => { window.loadEkspedisi(); })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, payload => { window.loadDrivers(); })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => { window.loadOrders(); })
