@@ -52,7 +52,7 @@
             <div class="flex items-center gap-3">
                 <button onclick="window.bukaNotifAdmin()" class="relative p-2 text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 active:scale-95 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                    <span id="admin-notif-dot" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                    <span id="admin-notif-dot" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white hidden"></span>
                 </button>
             </div>
         </header>
@@ -62,7 +62,6 @@
             <div id="view-radar" class="h-full w-full relative overflow-hidden flex flex-col">
                 <div id="admin-map" class="absolute inset-0 w-full h-full z-0"></div>
                 
-                <!-- Panel Navigasi Peta (Kiri Atas) -->
                 <div class="absolute top-4 left-4 right-4 md:left-6 md:right-auto z-[900] flex flex-col gap-3 pointer-events-none w-[calc(100%-2rem)] md:w-96">
                     <div class="bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 flex items-center px-3 py-2 pointer-events-auto">
                         <input type="text" id="radar-search" placeholder="Cari alamat / Paste Gmaps Link..." class="flex-1 bg-transparent border-none outline-none text-sm font-bold text-gray-700 placeholder-gray-400">
@@ -84,27 +83,21 @@
                     </div>
                 </div>
 
-                <!-- Tombol Floating Control (Kanan Bawah) - DITAIKKAN POSISINYA KE bottom-28 -->
                 <div class="absolute bottom-28 right-4 z-[900] flex flex-col gap-3 pointer-events-auto">
-                    <!-- Layer Map -->
                     <button onclick="window.toggleMapLayer()" class="w-12 h-12 bg-white rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.2)] flex items-center justify-center text-gray-600 hover:text-blue-600 active:scale-95 transition-all border border-gray-100" title="Ubah Tampilan Peta">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </button>
-                    <!-- GPS -->
                     <button onclick="window.locateGPS()" class="w-12 h-12 bg-white rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.2)] flex items-center justify-center text-gray-600 hover:text-blue-600 active:scale-95 transition-all border border-gray-100" title="GPS Saya">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                     </button>
-                    <!-- Setting Radius -->
                     <button onclick="window.bukaModalRadius()" class="w-12 h-12 bg-indigo-600 rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.2)] flex items-center justify-center text-white hover:bg-indigo-700 active:scale-95 transition-all" title="Setting Radius Wilayah">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243-2.829a4.978 4.978 0 011.414-2.829m-1.414 2.829a5 5 0 00-1.414 2.829m-1.414-2.829l-2.829-2.829m0 0a9 9 0 010-12.728m0 0L3 3m0 18l2.829-2.829"></path></svg>
                     </button>
-                    <!-- Manajemen Ekspedisi -->
                     <button onclick="window.toggleSheetEks()" class="w-12 h-12 bg-gray-900 rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.2)] flex items-center justify-center text-white hover:bg-black active:scale-95 transition-all border border-gray-800" title="Manajemen Aset/Ekspedisi">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
                     </button>
                 </div>
 
-                <!-- Sheet Ekspedisi (Overlay di dalam Map Radar) -->
                 <div id="sheet-ekspedisi" class="absolute bottom-0 left-0 w-full bg-white z-[4000] rounded-t-[28px] shadow-[0_-10px_40px_rgba(0,0,0,0.15)] transform translate-y-[calc(100%-85px)] transition-transform duration-500 pt-3 flex flex-col h-[75vh]">
                     <div class="cursor-pointer pb-4 px-6 flex-shrink-0" onclick="window.toggleSheetEks()">
                         <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
@@ -138,7 +131,6 @@
                 </div>
             </div>
 
-            <!-- Bagian-bagian lainnya tetap sama -->
             <div id="view-dispatch" class="w-full hidden p-4 md:p-6 h-full flex-col">
                 <div class="flex justify-between items-center mb-4 flex-shrink-0">
                     <div>
@@ -211,11 +203,10 @@
                         
                         <div class="w-full h-48 bg-gray-50 border-2 border-dashed border-blue-300 rounded-xl flex items-center justify-center relative overflow-hidden mb-4 hover:bg-gray-100 transition-colors">
                             <img id="prm-preview" class="hidden w-full h-full object-cover">
-                            <div id="prm-placeholder" class="text-center text-blue-500 pointer-events-none">
-                                <span class="text-3xl mb-2 block">🖼️</span>
-                                <p class="text-xs font-bold">Ketuk untuk pilih gambar</p>
-                            </div>
-                            <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer" onchange="window.previewPromo(event)">
+                            <!-- SVG Upload Photo Image -->
+                            <svg id="prm-placeholder" class="w-10 h-10 text-blue-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <!-- Z-index 10 biar gampang diklik & w-full h-full -->
+                            <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="window.previewPromo(event)">
                             <input type="hidden" id="prm-base64">
                         </div>
                         
@@ -305,14 +296,15 @@
         </div>
     </div>
 
-    <!-- Modal Modal Lainya -->
+    <!-- Modal Notif Admin -->
     <div id="modal-notif-admin" class="fixed inset-0 z-[10000] bg-gray-900/70 backdrop-blur-sm hidden items-center justify-center p-4 transition-opacity">
         <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
             <div class="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50">
                 <h3 class="font-black text-lg text-gray-800">Pusat Notifikasi</h3>
                 <button onclick="window.tutupModal('modal-notif-admin')" class="bg-gray-200 p-2 hover:bg-gray-300 rounded-full font-bold text-gray-600">✖</button>
             </div>
-            <div class="p-6 overflow-y-auto flex-1 space-y-3">
+            <!-- Div List Notif di sini -->
+            <div class="p-6 overflow-y-auto flex-1 bg-white space-y-3" id="list-notif-admin">
                 <p class="text-center text-sm font-bold text-gray-400 mt-4">Belum ada aktivitas baru.</p>
             </div>
         </div>
@@ -326,10 +318,12 @@
             </div>
             <div class="p-6 space-y-4 overflow-y-auto flex-1">
                 <div class="flex items-center gap-4 mb-2 bg-gray-50 p-4 rounded-xl border border-gray-200">
-                    <div class="w-16 h-16 rounded-full bg-white border-2 border-dashed border-blue-400 flex items-center justify-center overflow-hidden relative shadow-sm">
+                    <div class="w-16 h-16 rounded-full bg-white border-2 border-dashed border-blue-400 flex items-center justify-center overflow-hidden relative shadow-sm group hover:border-blue-500 transition-colors">
                         <img id="d-foto-preview" class="hidden w-full h-full object-cover">
-                        <span id="d-foto-placeholder" class="text-2xl text-blue-400 pointer-events-none">📸</span>
-                        <input type="file" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="window.previewFotoDriver(event)">
+                        <!-- SVG Outline Profesional Buat Kamera -->
+                        <svg id="d-foto-placeholder" class="w-6 h-6 text-blue-400 group-hover:text-blue-500 transition-colors pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <!-- Z-index 10 di sini paling penting biar bisa di-klik -->
+                        <input type="file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="window.previewFotoDriver(event)">
                     </div>
                     <div><p class="text-sm font-black text-gray-700">Foto Profil Driver</p><p class="text-[10px] font-bold text-gray-500 mt-0.5">Ketuk ikon kamera.</p><input type="hidden" id="d-foto-base64"></div>
                 </div>
@@ -368,6 +362,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/js/db.js"></script>
-    <script src="/js/admin.js?v=map_fixed_ux_v1"></script> 
+    <script src="/js/admin.js?v=notif_save_fixed"></script> 
 </body>
 </html>
