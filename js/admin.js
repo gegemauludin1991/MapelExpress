@@ -1,6 +1,6 @@
 /**
  * ADMIN ENGINE - MAPEL EXPRESS
- * (MERGED MAP & RADAR SYSTEM + RADIUS CIRCLE OVERLAY)
+ * (FIXED UX: LONG PRESS TO ADD MARKER & AUTO OPEN SHEET)
  */
 
 const sb = window.sb || (typeof supabase !== 'undefined' ? supabase : null);
@@ -78,29 +78,59 @@ let tileStreet = null;
 let tileSat = null;
 let isSatMode = false;
 
+// Variabel untuk Logika Tahan 3 Detik
+let holdMapTimer = null;
+
 if (typeof L !== 'undefined' && document.getElementById('admin-map')) {
     
     adminMap = L.map('admin-map', { zoomControl: false }).setView([OFFICE.lat, OFFICE.lng], 14);
     
-    // Inisialisasi Tampilan Peta
     tileStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
     tileSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
     tileStreet.addTo(adminMap); // Default mode
 
-    // Ikon Markas
     const basecampIcon = L.icon({ iconUrl: '/assets/icons/pin.png', iconSize: [45, 45], iconAnchor: [22.5, 45], popupAnchor: [0, -40] });
     L.marker([OFFICE.lat, OFFICE.lng], { icon: basecampIcon, zIndexOffset: 999 }).addTo(adminMap).bindPopup("<b class='text-sm'>Markas MapelExpress</b>");
 
-    // Event Klik Peta (Khusus Saat Tambah Ekspedisi Dibuka)
-    adminMap.on('click', function(e) {
-        const sheet = document.getElementById('sheet-ekspedisi');
-        if(sheet && !sheet.classList.contains('translate-y-[calc(100%-85px)]')) {
-            document.getElementById('f-eks-lat').value = e.latlng.lat.toFixed(6);
-            document.getElementById('f-eks-lng').value = e.latlng.lng.toFixed(6);
-            if(tempEksMarker) adminMap.removeLayer(tempEksMarker);
-            tempEksMarker = L.marker(e.latlng).addTo(adminMap).bindPopup("<span class='text-xs font-bold'>Titik Gerai Baru</span>").openPopup();
-        }
+    // LOGIKA LONG PRESS (TAHAN 3 DETIK) DENGAN MOUSE/TOUCH
+    const startHoldTimer = (e) => {
+        holdMapTimer = setTimeout(() => {
+            bikinTitikDariMap(e);
+        }, 3000); // Tepat 3 detik (3000ms) sesuai request
+    };
+
+    const clearHoldTimer = () => {
+        if (holdMapTimer) clearTimeout(holdMapTimer);
+    };
+
+    // Event untuk Desktop (Mouse)
+    adminMap.on('mousedown', startHoldTimer);
+    adminMap.on('mouseup mousemove', clearHoldTimer);
+
+    // Event untuk Mobile (Touch)
+    adminMap.on('touchstart', startHoldTimer);
+    adminMap.on('touchend touchmove', clearHoldTimer);
+    
+    // Backup: Leaflet contextmenu (klik kanan / long press default mobile)
+    adminMap.on('contextmenu', function(e) {
+        clearHoldTimer(); // Mencegah kepanggil 2 kali
+        bikinTitikDariMap(e);
     });
+}
+
+// Fungsi eksekusi setelah nahan 3 detik
+function bikinTitikDariMap(e) {
+    // 1. Munculin marker
+    document.getElementById('f-eks-lat').value = e.latlng.lat.toFixed(6);
+    document.getElementById('f-eks-lng').value = e.latlng.lng.toFixed(6);
+    if(tempEksMarker) adminMap.removeLayer(tempEksMarker);
+    tempEksMarker = L.marker(e.latlng).addTo(adminMap).bindPopup("<span class='text-xs font-bold'>Titik Gerai Baru</span>").openPopup();
+
+    // 2. Buka sheet otomatis kalau masih ketutup
+    const sheet = document.getElementById('sheet-ekspedisi');
+    if(sheet && sheet.classList.contains('translate-y-[calc(100%-85px)]')) {
+        window.toggleSheetEks();
+    }
 }
 
 // FAB Action: Switch Layer Map
@@ -218,7 +248,7 @@ window.simpanEkspedisi = async function() {
         const nama = document.getElementById('f-eks-nama').value;
         const lat = document.getElementById('f-eks-lat').value;
         const lng = document.getElementById('f-eks-lng').value;
-        if(!nama || !lat || !lng) return alert("⚠️ ISI NAMA CABANG & TAP PETA DULU!");
+        if(!nama || !lat || !lng) return alert("⚠️ ISI NAMA CABANG & TAHAN PETA 3 DETIK DULU!");
         await sb.from('ekspedisi').insert([{ nama: nama, lat: parseFloat(lat), lng: parseFloat(lng) }]);
         document.getElementById('f-eks-nama').value = '';
         if(tempEksMarker && adminMap) adminMap.removeLayer(tempEksMarker);
@@ -423,8 +453,6 @@ window.simpanSemuaTarif = async function() {
         alert("✅ Konfigurasi Tarif berhasil disimpan!");
     } catch (e) { alert("Error: " + e.message); }
 };
-
-// Sisa script lainnya (Promos, Driver, Broadcast) gue persingkat karna ga ada perubahan fungsi
 
 window.bukaModalDriver = function() { document.getElementById('modal-form-driver').classList.replace('hidden', 'flex'); };
 window.simpanBroadcast = async function() { alert("Broadcast dikirim!"); }; 
