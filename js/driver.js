@@ -12,6 +12,9 @@ const sb = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseK
 const OFFICE = { lat: -6.977414, lng: 107.555359 };
 let myMap = null;
 
+// INISIALISASI CHANNEL BROADCAST GLOBAL BIAR LOCATION SYNC NYALA TRUS
+const driverChannel = sb ? sb.channel('custom-driver-channel', { config: { broadcast: { ack: false } } }) : null;
+
 // ==========================================
 // SETUP NAVBAR AMAN (ANTI-ERROR)
 // ==========================================
@@ -227,7 +230,8 @@ function updateSaldoUI() {
 // REALTIME ORDER & KAMERA LOGIC
 // ==========================================
 function listenToIncomingOrders() {
-    sb.channel('custom-driver-channel')
+    if(!driverChannel) return;
+    driverChannel
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
             console.log("Ada pesanan masuk ke database!", payload);
             const order = payload.new;
@@ -385,6 +389,6 @@ document.getElementById('btn-submit-foto').onclick = async function() {
 };
 
 function broadcastLocation(latlng) {
-    if(!sb) return;
-    sb.channel('custom-driver-channel').send({ type: 'broadcast', event: 'update_driver_map', payload: { lat: latlng.lat, lng: latlng.lng }});
+    if(!driverChannel) return;
+    driverChannel.send({ type: 'broadcast', event: 'update_driver_map', payload: { lat: latlng.lat, lng: latlng.lng }});
 }

@@ -571,6 +571,9 @@ document.getElementById('btn-pesan-kurir').onclick = async () => {
                 </div>
             `;
             document.querySelector('.flex.items-center.justify-between.pt-2.border-t').style.display = 'none';
+            
+            // Panggil Listener Realtime Supabase biar map/status ngikutin terus
+            listenToActiveOrder();
         }
     }
 };
@@ -578,61 +581,73 @@ document.getElementById('btn-pesan-kurir').onclick = async () => {
 // ==========================================
 // 7. LISTENER REALTIME UPDATE DRIVER
 // ==========================================
-if(window.appEvents) {
-    window.appEvents.on('order_status_changed', (orderData) => {
-        if(!isOrderActive || orderData.id !== window.currentOrderData?.id) return;
+function listenToActiveOrder() {
+    if (!sb) return;
 
-        if(orderData.status === 'accepted') {
-            const driver = orderData.data.driver; 
-            document.getElementById('section-form-order').innerHTML = `
-                <div class="bg-white border p-5 rounded-3xl mb-3 shadow-lg">
-                    <p id="status-jemput-teks" class="text-[11px] font-black text-blue-600 uppercase mb-3 animate-pulse">Kurir Menuju Lokasi Jemput</p>
-                    <div class="flex items-center gap-4">
-                        <img src="${driver?.photo || '/assets/icons/kurir.png'}" class="w-14 h-14 rounded-full border border-gray-200 object-cover">
-                        <div class="flex-1">
-                            <h4 class="font-black text-gray-800">${driver?.name || 'Mitra Driver'}</h4>
-                            <p class="text-xs text-gray-500 font-bold">${driver?.nopol || '-'}</p>
+    // 1. Listen ke perubahan status order di database (accepted, picked_up, completed)
+    sb.channel('public:orders')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, payload => {
+            const orderData = payload.new;
+            if (!isOrderActive || !window.currentOrderData || orderData.id !== window.currentOrderData.id) return;
+
+            if(orderData.status === 'accepted') {
+                const driver = orderData.data.driver; 
+                document.getElementById('section-form-order').innerHTML = `
+                    <div class="bg-white border p-5 rounded-3xl mb-3 shadow-lg">
+                        <p id="status-jemput-teks" class="text-[11px] font-black text-blue-600 uppercase mb-3 animate-pulse">Kurir Menuju Lokasi Jemput</p>
+                        <div class="flex items-center gap-4">
+                            <img src="${driver?.photo || '/assets/icons/kurir.png'}" class="w-14 h-14 rounded-full border border-gray-200 object-cover">
+                            <div class="flex-1">
+                                <h4 class="font-black text-gray-800">${driver?.name || 'Mitra Driver'}</h4>
+                                <p class="text-xs text-gray-500 font-bold">${driver?.nopol || '-'}</p>
+                            </div>
                         </div>
+                        <a href="https://wa.me/${driver?.wa || OFFICE.wa}" target="_blank" class="mt-4 flex items-center justify-center gap-2 w-full bg-[#25D366] text-white font-bold py-3 rounded-xl text-sm active:scale-95 transition-transform shadow-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg> Hubungi Driver
+                        </a>
                     </div>
-                    <a href="https://wa.me/${driver?.wa || OFFICE.wa}" target="_blank" class="mt-4 flex items-center justify-center gap-2 w-full bg-[#25D366] text-white font-bold py-3 rounded-xl text-sm active:scale-95 transition-transform shadow-md">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg> Hubungi Driver
-                    </a>
-                </div>
-            `;
-        } 
-        else if (orderData.status === 'picked_up') {
-            const statusText = document.getElementById('status-jemput-teks');
-            if(statusText) {
-                statusText.innerText = "Paket Dalam Perjalanan ke Tujuan";
-                statusText.classList.replace('text-blue-600', 'text-orange-500');
+                `;
+            } 
+            else if (orderData.status === 'picked_up') {
+                const statusText = document.getElementById('status-jemput-teks');
+                if(statusText) {
+                    statusText.innerText = "Paket Dalam Perjalanan ke Tujuan";
+                    statusText.classList.replace('text-blue-600', 'text-orange-500');
+                }
             }
-        }
-        else if (orderData.status === 'completed') {
-            isOrderActive = false;
-            if (liveDriverMarker && myMap) myMap.map.removeLayer(liveDriverMarker);
-            
-            customerNotifs.unshift({ title: "Paket Selesai Diantar 🎉", time: getWaktuSekarang(), alamatTujuan: window.currentOrderData.alamatTujuan });
-            localStorage.setItem('mapel_customer_notif', JSON.stringify(customerNotifs));
+            else if (orderData.status === 'completed') {
+                isOrderActive = false;
+                if (liveDriverMarker && myMap) myMap.map.removeLayer(liveDriverMarker);
+                
+                customerNotifs.unshift({ title: "Paket Selesai Diantar 🎉", time: getWaktuSekarang(), alamatTujuan: window.currentOrderData.alamatTujuan });
+                localStorage.setItem('mapel_customer_notif', JSON.stringify(customerNotifs));
 
-            const successHtml = `
-                <div id="modal-success-order" class="fixed inset-0 z-[100000] flex items-center justify-center bg-gray-900 bg-opacity-70 backdrop-blur-sm p-5">
-                    <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center shadow-2xl">
-                        <div class="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                const successHtml = `
+                    <div id="modal-success-order" class="fixed inset-0 z-[100000] flex items-center justify-center bg-gray-900 bg-opacity-70 backdrop-blur-sm p-5">
+                        <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 text-center shadow-2xl">
+                            <div class="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                            </div>
+                            <h2 class="text-2xl font-black text-gray-800 mb-1">Paket Terkirim!</h2>
+                            <p class="text-[12px] text-gray-500 leading-relaxed px-2">Yey! Kurir sudah berhasil mengantarkan paket kamu ke lokasi tujuan dengan aman.</p>
+                            <button onclick="location.reload()" class="w-full mt-6 bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(34,197,94,0.3)] transition-all">Pesan Lagi</button>
                         </div>
-                        <h2 class="text-2xl font-black text-gray-800 mb-1">Paket Terkirim!</h2>
-                        <p class="text-[12px] text-gray-500 leading-relaxed px-2">Yey! Kurir sudah berhasil mengantarkan paket kamu ke lokasi tujuan dengan aman.</p>
-                        <button onclick="location.reload()" class="w-full mt-6 bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl shadow-[0_4px_15px_rgba(34,197,94,0.3)] transition-all">Pesan Lagi</button>
                     </div>
-                </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', successHtml);
-        }
-    });
+                `;
+                document.body.insertAdjacentHTML('beforeend', successHtml);
+            }
+        }).subscribe();
 
-    window.appEvents.on('update_driver_map', (data) => {
-        if (!isOrderActive || !myMap) return; 
-        if (!liveDriverMarker) { liveDriverMarker = L.marker([data.lat, data.lng], { icon: kurirIcon, zIndexOffset: 99999 }).addTo(myMap.map); } 
-        else { liveDriverMarker.setLatLng([data.lat, data.lng]); }
-    });
+    // 2. Listen ke broadcast realtime pergerakan map dari channel driver
+    sb.channel('custom-driver-channel')
+        .on('broadcast', { event: 'update_driver_map' }, (payload) => {
+            if (!isOrderActive || !myMap) return; 
+            const data = payload.payload;
+            if (!liveDriverMarker) { 
+                liveDriverMarker = L.marker([data.lat, data.lng], { icon: kurirIcon, zIndexOffset: 99999 }).addTo(myMap.map); 
+            } 
+            else { 
+                liveDriverMarker.setLatLng([data.lat, data.lng]); 
+            }
+        }).subscribe();
 }
